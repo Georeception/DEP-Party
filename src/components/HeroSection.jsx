@@ -3,6 +3,7 @@ import { Box, Container, Typography, Button, IconButton } from '@mui/material';
 import { styled, keyframes } from '@mui/material/styles';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { Link } from 'react-router-dom';
 
 const fadeIn = keyframes`
   from {
@@ -155,6 +156,8 @@ const Hero = () => {
         >
           <ActionButton
             variant="contained"
+            component={Link}
+            to="/volunteer"
             sx={{
               backgroundColor: '#FFD700',
               color: '#000',
@@ -162,12 +165,13 @@ const Hero = () => {
                 backgroundColor: '#FFD700',
               },
             }}
-            href="/volunteer"
           >
             JOIN US
           </ActionButton>
           <ActionButton
             variant="contained"
+            component={Link}
+            to="/donate"
             sx={{
               backgroundColor: '#006400',
               color: '#fff',
@@ -175,7 +179,6 @@ const Hero = () => {
                 backgroundColor: '#006400',
               },
             }}
-            href="/donate"
           >
             DONATE
           </ActionButton>
