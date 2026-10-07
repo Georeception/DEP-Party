@@ -18,25 +18,12 @@ import {
   Stepper,
   Step,
   StepLabel,
-  Radio,
-  RadioGroup,
-  FormControlLabel,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   FormHelperText,
 } from '@mui/material';
 import PageHero from '../components/PageHero';
 import { styled } from '@mui/material/styles';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import CreditCardIcon from '@mui/icons-material/CreditCard';
-import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
-import PhoneAndroidIcon from '@mui/icons-material/PhoneAndroid';
-import PaymentsIcon from '@mui/icons-material/Payments';
-import PaymentIcon from '@mui/icons-material/Payment';
-import { useAuth } from '../contexts/AuthContext';
+import { loadPaystack } from '../services/paystack';
 import { locationApi, membershipApi } from '../services/api';
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
@@ -70,59 +57,12 @@ const MembershipCard = styled(Card)(({ theme, selected }) => ({
   },
 }));
 
-const PaymentMethodCard = styled(Card)(({ theme, selected, brandColor }) => ({
-  height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-  transition: 'all 0.3s ease-in-out',
-  border: '2px solid',
-  borderColor: selected ? '#FFD700' : brandColor,
-  backgroundColor: selected ? 'rgba(255, 215, 0, 0.1)' : 'transparent',
-  cursor: 'pointer',
-  '&:hover': {
-    transform: 'translateY(-4px)',
-    boxShadow: theme.shadows[4],
-    backgroundColor: selected ? 'rgba(255, 215, 0, 0.1)' : `${brandColor}15`,
-  },
-  position: 'relative',
-  '&::after': selected ? {
-    content: '""',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 'inherit',
-    border: '2px solid #FFD700',
-    pointerEvents: 'none'
-  } : {}
-}));
-
-const counties = [
-  'Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Kiambu', 'Machakos', 'Meru', 'Embu', 'Nyeri', 'Uasin Gishu',
-  // ...add more counties as needed
-];
-
-const constituenciesByCounty = {
-  Nairobi: ['Westlands', 'Langata', 'Starehe'],
-  Mombasa: ['Kisauni', 'Likoni'],
-  // ...add more
-};
-
-const wardsByConstituency = {
-  Westlands: ['Kangemi', 'Mountain View'],
-  Langata: ['Karen', 'Nairobi West'],
-  Starehe: ['Ngara', 'Pangani'],
-  // ...add more
-};
-
 const JoinUs = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useAuth();
   const [activeStep, setActiveStep] = useState(0);
   const [selectedPlan, setSelectedPlan] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('mpesa');
-  const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingPayment, setPendingPayment] = useState(null);
   const [locations, setLocations] = useState({
     counties: [],
     constituencies: [],
@@ -224,45 +164,6 @@ const JoinUs = () => {
 
   const steps = ['Select Membership Plan', 'Personal Information', 'Payment'];
 
-  const paymentMethods = [
-    { 
-      value: 'mpesa', 
-      label: 'M-PESA', 
-      icon: <PhoneAndroidIcon />,
-      color: '#00A960'
-    },
-    { 
-      value: 'airtel', 
-      label: 'Airtel Money', 
-      icon: <PhoneAndroidIcon />,
-      color: '#E40000'
-    },
-    { 
-      value: 'card', 
-      label: 'Credit/Debit Card', 
-      icon: <CreditCardIcon />,
-      color: '#1A1F71'
-    },
-    { 
-      value: 'bank', 
-      label: 'Bank Transfer', 
-      icon: <AccountBalanceIcon />,
-      color: '#006400'
-    },
-    { 
-      value: 'paypal', 
-      label: 'PayPal', 
-      icon: <PaymentsIcon />,
-      color: '#003087'
-    },
-    { 
-      value: 'stripe', 
-      label: 'Stripe', 
-      icon: <PaymentIcon />,
-      color: '#635BFF'
-    }
-  ];
-
   // Fetch counties on component mount
   useEffect(() => {
     const fetchCounties = async () => {
@@ -346,10 +247,15 @@ const JoinUs = () => {
     // Validate required fields before proceeding
     if (activeStep === 1) {
       const requiredFields = ['firstName', 'lastName', 'phone', 'age', 'occupation', 'county', 'constituency', 'ward', 'gender'];
+      if (selectedPlan !== 'Mwananchi') requiredFields.push('email');
       const missingFields = requiredFields.filter(field => !formData[field]);
       
       if (missingFields.length > 0) {
         setError('Please fill in all required fields marked with *');
+        return;
+      }
+      if (selectedPlan !== 'Mwananchi' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+        setError('Enter a valid email address for Paystack checkout.');
         return;
       }
     }
@@ -363,69 +269,106 @@ const JoinUs = () => {
   };
 
   const handleSubmit = async () => {
-    try {
-      // Validate all required fields
-      const requiredFields = ['firstName', 'lastName', 'phone', 'age', 'occupation', 'county', 'constituency', 'ward', 'gender'];
-      const missingFields = requiredFields.filter(field => !formData[field]);
-      
-      if (missingFields.length > 0) {
-        setError('Please fill in all required fields marked with *');
-        return;
-      }
+    if (isSubmitting) return;
+    setError('');
 
-      // Prepare membership data
-      const membershipData = {
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        phone_number: formData.phone,
-        age: formData.age,
-        gender: formData.gender,
-        occupation: formData.occupation,
-        county: formData.county,
-        constituency: formData.constituency,
-        ward: formData.ward,
-        membership_type: selectedPlan.toLowerCase(),
-        payment_method: paymentMethod
-      };
+    const requiredFields = ['firstName', 'lastName', 'phone', 'age', 'occupation', 'county', 'constituency', 'ward', 'gender'];
+    if (selectedPlan !== 'Mwananchi') requiredFields.push('email');
+    const missingFields = requiredFields.filter(field => !formData[field]);
+    if (missingFields.length > 0) {
+      setError('Please fill in all required fields marked with *');
+      return;
+    }
 
-      if (selectedPlan === 'Mwananchi') {
-        // For Mwananchi, submit without authentication
-        const data = await membershipApi.create(membershipData, false);
+    const membershipData = {
+      first_name: formData.firstName.trim(),
+      last_name: formData.lastName.trim(),
+      email: formData.email.trim(),
+      phone: formData.phone.trim(),
+      age: formData.age,
+      gender: formData.gender,
+      occupation: formData.occupation.trim(),
+      county: formData.county,
+      constituency: formData.constituency,
+      ward: formData.ward,
+      membership_type: selectedPlan.toLowerCase(),
+    };
+
+    if (selectedPlan === 'Mwananchi') {
+      setIsSubmitting(true);
+      try {
+        await membershipApi.create(membershipData, false);
         setSubmitted(true);
-        navigate('/', { 
-          state: { 
-            message: 'Membership application successful! Thank you for joining us.' 
-          } 
+        navigate('/', {
+          state: {
+            message: 'Membership application successful! Thank you for joining us.'
+          }
         });
+      } catch (error) {
+        console.error('Error submitting membership:', error);
+        setError(error.response?.data?.detail || 'An error occurred while submitting your application. Please try again.');
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    const publicKey = process.env.REACT_APP_PAYSTACK_PUBLIC_KEY;
+    if (!publicKey && !pendingPayment) {
+      setError('Paystack is not configured yet. Please add the public key to the frontend environment and the secret key to the backend environment.');
+      return;
+    }
+
+    const verifyPayment = async (reference) => {
+      const paymentDetails = { reference, membershipData };
+      setPendingPayment(paymentDetails);
+      await membershipApi.verifyPaystackPayment(reference, membershipData);
+      setPendingPayment(null);
+      setSubmitted(true);
+      setActiveStep(3);
+      setIsSubmitting(false);
+    };
+
+    setIsSubmitting(true);
+    try {
+      if (pendingPayment) {
+        await membershipApi.verifyPaystackPayment(
+          pendingPayment.reference,
+          pendingPayment.membershipData
+        );
+        setPendingPayment(null);
+        setSubmitted(true);
+        setActiveStep(3);
+        setIsSubmitting(false);
       } else {
-        // For paid memberships, check authentication
-        if (!isAuthenticated) {
-          // Store membership data in session storage before redirecting
-          sessionStorage.setItem('pendingMembership', JSON.stringify({
-            plan: selectedPlan,
-            paymentMethod,
-            formData: membershipData
-          }));
-          navigate('/login', { 
-            state: { 
-              message: 'Please log in to complete your membership payment.',
-              redirectTo: '/joinus'
-            } 
-          });
-        } else {
-          // If authenticated, proceed with membership creation
-          const data = await membershipApi.create(membershipData, true);
-          navigate('/dashboard/payments', { 
-            state: { 
-              membershipId: data.id,
-              message: 'Please complete your payment to activate your membership.' 
-            } 
-          });
-        }
+        const plan = plans.find(item => item.title === selectedPlan);
+        const PaystackPop = await loadPaystack();
+        const payment = PaystackPop.setup({
+          key: publicKey,
+          email: membershipData.email,
+          amount: plan.amount * 100,
+          currency: 'KES',
+          callback: async (response) => {
+            try {
+              await verifyPayment(response.reference);
+            } catch (error) {
+              console.error('Error verifying Paystack membership payment:', error);
+              setError(error.response?.data?.detail || 'Payment was received, but could not be verified yet. Retry verification to complete your application.');
+            } finally {
+              setIsSubmitting(false);
+            }
+          },
+          onClose: () => {
+            setIsSubmitting(false);
+          },
+        });
+
+        payment.openIframe();
       }
     } catch (error) {
-      console.error('Error submitting membership:', error);
-      setError(error.response?.data?.detail || 'An error occurred while submitting your application. Please try again.');
+      console.error('Error submitting membership payment:', error);
+      setError(error.response?.data?.detail || 'Unable to start Paystack checkout. Please try again.');
+      setIsSubmitting(false);
     }
   };
 
@@ -588,6 +531,25 @@ const JoinUs = () => {
       </Grid>
       <Grid item xs={12} sm={6}>
         <TextField
+          fullWidth
+          label="Email Address"
+          name="email"
+          type="email"
+          required={selectedPlan !== 'Mwananchi'}
+          value={formData.email}
+          onChange={handleChange}
+          error={Boolean(error) && selectedPlan !== 'Mwananchi'
+            && (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim()))}
+          helperText={Boolean(error) && !formData.email && selectedPlan !== 'Mwananchi'
+            ? 'Email address is required for Paystack'
+            : Boolean(formData.email) && selectedPlan !== 'Mwananchi'
+              && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())
+              ? 'Enter a valid email address'
+              : ''}
+        />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <TextField
           required
           fullWidth
           label="Phone Number"
@@ -726,53 +688,28 @@ const JoinUs = () => {
       );
     }
 
+    const plan = plans.find(item => item.title === selectedPlan);
+
     return (
-      <Box>
-        <Typography variant="h6" gutterBottom>
-          Select Payment Method
+      <Box sx={{ maxWidth: 560, mx: 'auto', py: { xs: 1, sm: 2 } }}>
+        <Typography variant="h5" component="h2" sx={{ mb: 2, color: 'primary.dark', fontWeight: 700 }}>
+          Complete your membership payment
         </Typography>
-        <Grid container spacing={2}>
-          {paymentMethods.map((method) => (
-            <Grid item xs={6} sm={4} md={2} key={method.value}>
-              <PaymentMethodCard
-                selected={paymentMethod === method.value}
-                onClick={() => setPaymentMethod(method.value)}
-                brandColor={method.color}
-              >
-                <CardContent sx={{ 
-                  p: 2,
-                  textAlign: 'center',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 1,
-                  backgroundColor: paymentMethod === method.value ? 'rgba(255, 215, 0, 0.1)' : 'transparent',
-                }}>
-                  <IconButton
-                    sx={{
-                      color: paymentMethod === method.value ? '#FFD700' : method.color,
-                      fontSize: '2rem',
-                      '&:hover': {
-                        backgroundColor: paymentMethod === method.value ? 'rgba(255, 215, 0, 0.2)' : `${method.color}20`,
-                      },
-                    }}
-                  >
-                    {method.icon}
-                  </IconButton>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: paymentMethod === method.value ? '#B8860B' : method.color,
-                      fontWeight: paymentMethod === method.value ? 'bold' : 'normal',
-                    }}
-                  >
-                    {method.label}
-                  </Typography>
-                </CardContent>
-              </PaymentMethodCard>
-            </Grid>
-          ))}
-        </Grid>
+        <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2, bgcolor: 'background.default' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mb: 1 }}>
+            <Typography color="text.secondary">Membership plan</Typography>
+            <Typography fontWeight={600}>{plan?.title}</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+            <Typography color="text.secondary">Amount due</Typography>
+            <Typography fontWeight={700} color="primary.main">
+              KES {plan?.amount.toLocaleString()}
+            </Typography>
+          </Box>
+        </Paper>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+          Continue to Paystack to complete your payment securely. Your membership application will be submitted after the payment is verified.
+        </Typography>
       </Box>
     );
   };
@@ -809,7 +746,7 @@ const JoinUs = () => {
           )}
           {submitted ? (
             <Alert severity="success" sx={{ mb: 2 }}>
-              Thank you for your interest! We'll be in touch soon.
+              Your payment has been verified and your membership application is complete.
             </Alert>
           ) : (
             <>
@@ -822,7 +759,7 @@ const JoinUs = () => {
                 gap: { xs: 2, sm: 0 },
               }}>
                 <Button
-                  disabled={activeStep === 0}
+                  disabled={activeStep === 0 || isSubmitting || Boolean(pendingPayment)}
                   onClick={handleBack}
                   sx={{ 
                     mr: { xs: 0, sm: 1 },
@@ -834,7 +771,7 @@ const JoinUs = () => {
                 <Button
                   variant="contained"
                   onClick={activeStep === steps.length - 1 ? handleSubmit : handleNext}
-                  disabled={activeStep === 0 && !selectedPlan}
+                  disabled={(activeStep === 0 && !selectedPlan) || isSubmitting || submitted}
                   sx={{
                     backgroundColor: '#006400',
                     '&:hover': {
@@ -843,27 +780,21 @@ const JoinUs = () => {
                     width: { xs: '100%', sm: 'auto' },
                   }}
                 >
-                  {activeStep === steps.length - 1 ? 'Submit Application' : 'Next'}
+                  {isSubmitting
+                    ? 'Processing…'
+                    : activeStep !== steps.length - 1
+                      ? 'Next'
+                      : selectedPlan === 'Mwananchi'
+                        ? 'Submit Application'
+                        : pendingPayment
+                          ? 'Verify Payment'
+                          : `Pay KES ${plans.find(plan => plan.title === selectedPlan)?.amount.toLocaleString()} with Paystack`}
                 </Button>
               </Box>
             </>
           )}
         </StyledPaper>
       </Container>
-      <Dialog open={showLoginDialog} onClose={() => setShowLoginDialog(false)}>
-        <DialogTitle>Login Required</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Please log in or create an account to complete your membership payment.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => navigate('/register')}>Register</Button>
-          <Button onClick={() => navigate('/login')} variant="contained">
-            Login
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };

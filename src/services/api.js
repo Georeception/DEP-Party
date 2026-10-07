@@ -155,6 +155,20 @@ export const membershipApi = {
             console.error('Error creating membership:', error);
             throw error;
         }
+    },
+    verifyPaystackPayment: async (reference, membershipData) => {
+        try {
+            const response = await api.post('/memberships/verify-payment/', {
+                reference,
+                membership: membershipData,
+            }, {
+                skipAuth: true,
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error verifying Paystack membership payment:', error);
+            throw error;
+        }
     }
 };
 

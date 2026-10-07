@@ -6,6 +6,10 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 
 Set `REACT_APP_API_URL` in the project-root `.env` file to the absolute API base URL, including its API path (for example, the `/api` prefix). All frontend API requests use the shared client in `src/services/api.js`. Create React App does not load environment files from `src/`.
 
+## Paystack checkout
+
+Set `REACT_APP_PAYSTACK_PUBLIC_KEY` in the project-root `.env` file to enable Paystack checkout in the browser. Set `PAYSTACK_SECRET_KEY` only in the backend environment (for example, Render's service environment variables); the backend uses it to verify membership payments before recording them. Never put the secret key in a frontend environment variable. Restart the React development server after changing `.env`.
+
 ## Available Scripts
 
 In the project directory, you can run:

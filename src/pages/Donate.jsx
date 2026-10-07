@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import PageHero from '../components/PageHero';
+import { loadPaystack } from '../services/paystack';
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(4),
@@ -51,37 +52,6 @@ const predefinedAmounts = [
   { value: '25000', label: 'KES 25,000' },
   { value: '50000', label: 'KES 50,000' },
 ];
-
-let paystackScriptPromise;
-
-const loadPaystack = () => {
-  if (window.PaystackPop) {
-    return Promise.resolve(window.PaystackPop);
-  }
-
-  if (!paystackScriptPromise) {
-    paystackScriptPromise = new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://js.paystack.co/v1/inline.js';
-      script.async = true;
-      script.onload = () => {
-        if (window.PaystackPop) {
-          resolve(window.PaystackPop);
-        } else {
-          paystackScriptPromise = undefined;
-          reject(new Error('Paystack checkout could not be initialized.'));
-        }
-      };
-      script.onerror = () => {
-        paystackScriptPromise = undefined;
-        reject(new Error('Paystack checkout could not be loaded. Please try again.'));
-      };
-      document.body.appendChild(script);
-    });
-  }
-
-  return paystackScriptPromise;
-};
 
 const Donate = () => {
   const [amount, setAmount] = useState('');
