@@ -66,11 +66,22 @@ const Contact = () => {
                   </Box>
                   <Box display="flex" alignItems="center" gap={1}>
                     <PhoneIcon color="primary" fontSize="small" />
-                    <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>+1 234 567 890</Typography>
+                    <Typography
+                      component="a"
+                      href="tel:0724253622"
+                      variant="body2"
+                      sx={{ fontSize: '0.95rem', color: 'inherit', textDecoration: 'none' }}
+                    >
+                      0724253622
+                    </Typography>
                   </Box>
                   <Box display="flex" alignItems="center" gap={1}>
                     <LocationOnIcon color="primary" fontSize="small" />
-                    <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>123 Party Street, City, Country</Typography>
+                    <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>
+                      <strong>Physical Location:</strong> Geomaps Centre, Upper Hill, Nairobi, Kenya
+                      <br />
+                      <strong>Postal Address:</strong> P.O. Box 61071 - 00200, City Square, Nairobi
+                    </Typography>
                   </Box>
                 </Stack>
                 <Divider sx={{ my: 3, display: { xs: 'block', md: 'none' } }} />

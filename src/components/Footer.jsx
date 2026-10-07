@@ -119,10 +119,12 @@ const Footer = () => {
               </Link>
             </Stack>
             <Typography variant="body2" sx={{ mb: 1 }}>
-              Phone: +254 123 456 789
+              Phone: <Link href="tel:0724253622" color="inherit" underline="hover">0724253622</Link>
             </Typography>
             <Typography variant="body2">
-              Address: Makutano, 45519 - 00100, Nairobi, Kenya
+              Physical Location: Geomaps Centre, Upper Hill, Nairobi, Kenya
+              <br />
+              Postal Address: P.O. Box 61071 - 00200, City Square, Nairobi
             </Typography>
           </Grid>
         </Grid>
