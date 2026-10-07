@@ -64,7 +64,6 @@ const Dashboard = () => {
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const [userData, setUserData] = useState({
         name: 'Lenny Kivuti',
-        email: 'lennykivuti@gmail.com',
         membershipStatus: 'Active',
         membershipType: 'Premium',
         profilePicture: null

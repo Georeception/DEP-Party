@@ -45,7 +45,24 @@ const Contact = () => {
                 <Stack spacing={2}>
                   <Box display="flex" alignItems="center" gap={1}>
                     <EmailIcon color="primary" fontSize="small" />
-                    <Typography variant="body2" sx={{ fontSize: '0.95rem' }}>info@party.com</Typography>
+                    <Stack spacing={0.5}>
+                      <Typography
+                        component="a"
+                        href="mailto:executive.director@dep-party.com"
+                        variant="body2"
+                        sx={{ fontSize: '0.95rem', color: 'inherit', textDecoration: 'none' }}
+                      >
+                        executive.director@dep-party.com
+                      </Typography>
+                      <Typography
+                        component="a"
+                        href="mailto:info@dep-party.com"
+                        variant="body2"
+                        sx={{ fontSize: '0.95rem', color: 'inherit', textDecoration: 'none' }}
+                      >
+                        info@dep-party.com
+                      </Typography>
+                    </Stack>
                   </Box>
                   <Box display="flex" alignItems="center" gap={1}>
                     <PhoneIcon color="primary" fontSize="small" />

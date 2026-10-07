@@ -110,9 +110,14 @@ const Footer = () => {
             <Typography variant="h6" gutterBottom sx={{ color: 'secondary.main' }}>
               Party Headquarters
             </Typography>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              Email: lenny.kivuti@geoafrica.com
-            </Typography>
+            <Stack spacing={0.5} sx={{ mb: 1 }}>
+              <Link href="mailto:executive.director@dep-party.com" color="inherit" underline="hover">
+                executive.director@dep-party.com
+              </Link>
+              <Link href="mailto:info@dep-party.com" color="inherit" underline="hover">
+                info@dep-party.com
+              </Link>
+            </Stack>
             <Typography variant="body2" sx={{ mb: 1 }}>
               Phone: +254 123 456 789
             </Typography>
