@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -59,8 +59,12 @@ const MembershipCard = styled(Card)(({ theme, selected }) => ({
 
 const JoinUs = () => {
   const navigate = useNavigate();
-  const [activeStep, setActiveStep] = useState(0);
-  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [searchParams] = useSearchParams();
+  const requestedPlan = searchParams.get('plan');
+  const allowedPlans = ['Mwananchi', 'Bronze', 'Silver', 'Gold', 'Platinum'];
+  const initialPlan = allowedPlans.includes(requestedPlan) ? requestedPlan : null;
+  const [activeStep, setActiveStep] = useState(initialPlan ? 1 : 0);
+  const [selectedPlan, setSelectedPlan] = useState(initialPlan);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingPayment, setPendingPayment] = useState(null);
   const [locations, setLocations] = useState({
@@ -720,6 +724,7 @@ const JoinUs = () => {
         tag="Join us"
         title="Become a member"
         subtitle="Join a growing movement focused on service, unity, and meaningful national progress."
+        image="/images/handss.jpg"
       />
       <Container maxWidth="lg" sx={{ py: { xs: 4, md: 6 } }}>
         <Stepper 

@@ -23,6 +23,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Pagination,
   useTheme,
   useMediaQuery,
   FormControlLabel,
@@ -38,12 +39,15 @@ import {
 } from '@mui/icons-material';
 import { shopApi, pickupLocationsApi } from '../services/api';
 
+const ITEMS_PER_PAGE = 9;
+
 const Shop = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
   // State
   const [products, setProducts] = useState([]);
+  const [page, setPage] = useState(1);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [similarProducts, setSimilarProducts] = useState([]);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -76,7 +80,7 @@ const Shop = () => {
   const loadProducts = async () => {
     try {
       setLoading(true);
-      const data = await shopApi.getProducts();
+      const data = await shopApi.getProducts({}, { fetchAll: true });
       setProducts(Array.isArray(data) ? data : []);
     } catch (err) {
       setError('Failed to load products');
@@ -242,12 +246,15 @@ const Shop = () => {
     );
   }
 
+  const visibleProducts = products.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+
   return (
     <Box sx={{ backgroundColor: 'background.default', minHeight: '100vh' }}>
       <PageHero
         tag="Store"
         title="Party Merchandise"
         subtitle="Support the movement with official merchandise and accessories."
+        image="/images/shop.png"
       />
       <Container maxWidth="lg" sx={{ py: 8 }}>
         {/* Header with cart icon */}
@@ -271,7 +278,7 @@ const Shop = () => {
         {/* Product Grid */}
         <Grid container spacing={4}>
           {Array.isArray(products) && products.length > 0 ? (
-            products.map((product) => (
+            visibleProducts.map((product) => (
               <Grid item xs={12} sm={6} md={4} key={product.id || product.slug}>
                 <Card sx={{ 
                   height: '100%', 
@@ -371,6 +378,17 @@ const Shop = () => {
             </Grid>
           )}
         </Grid>
+        {products.length > ITEMS_PER_PAGE && (
+          <Pagination
+            count={Math.ceil(products.length / ITEMS_PER_PAGE)}
+            page={page}
+            onChange={(event, value) => setPage(value)}
+            color="primary"
+            siblingCount={isMobile ? 0 : 1}
+            aria-label="Product pages"
+            sx={{ display: 'flex', justifyContent: 'center', my: 5 }}
+          />
+        )}
 
         {/* Product Detail Modal */}
         <Modal

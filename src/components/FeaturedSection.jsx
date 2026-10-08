@@ -22,7 +22,7 @@ const FeaturedSection = () => {
 
   const featuredItems = [
     {
-      image: '/images/elections.jpg',
+      image: '/images/green.jpeg',
       title: 'EMPOWER THE VOTE',
       description: 'Secure your democratic right and make your voice heard. Learn about our initiatives to ensure fair and transparent elections across Kenya.',
       buttonText: 'Get Involved',
@@ -30,7 +30,7 @@ const FeaturedSection = () => {
       section: 'empower'
     },
     {
-      image: '/images/protect.jpg',
+      image: '/images/future.jfif',
       title: 'PROTECT THE FUTURE',
       description: 'Join our movement to build a prosperous Kenya. Discover our comprehensive plans for economic growth and social development.',
       buttonText: 'Learn More',

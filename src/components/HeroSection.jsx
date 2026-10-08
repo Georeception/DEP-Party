@@ -45,12 +45,12 @@ const Hero = () => {
 
   const images = [   
     '/images/meet.png',
-    '/images/people.png',
-    '/images/lenny.png',
-    '/images/croc.png',
-    '/images/speech.png',
-    '/images/dance.png',
-    '/images/campaign.png',
+    '/images/youth.jfif',
+    '/images/hands.jpg',
+    '/images/commit.jpg',
+    '/images/woman.jpg',
+    '/images/future.jfif',
+    '/images/shuka.jfif',
   ];
 
   const nextImage = () => {

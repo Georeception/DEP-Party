@@ -5,6 +5,27 @@ import PhoneIcon from '@mui/icons-material/Phone';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import PageHero from '../PageHero';
 
+const officeLocations = [
+  {
+    name: 'Geomaps Centre',
+    address: 'Upper Hill, Nairobi, Kenya',
+    query: 'Geomaps+Centre,+Upper+Hill,+Nairobi,+Kenya',
+    zoom: 17,
+  },
+  {
+    name: 'Embu',
+    address: 'Embu, Kenya',
+    query: 'Embu,+Kenya',
+    zoom: 16,
+  },
+  {
+    name: 'Lenny Kivuti International Centre (LKIC)',
+    address: 'Embu, Kenya',
+    query: 'Lenny+Kivuti+International+Centre+(LKIC),+Embu,+Kenya',
+    zoom: 17,
+  },
+];
+
 const Contact = () => {
   return (
     <Box sx={{
@@ -20,8 +41,9 @@ const Contact = () => {
         tag="Contact"
         title="Get in touch"
         subtitle="We’d love to hear from you and respond to your questions, ideas, and support."
+        image="/images/contact.png"
       />
-      <Container maxWidth="md" sx={{ py: 6 }}>
+      <Container maxWidth="lg" sx={{ py: 6 }}>
         <Card sx={{ borderRadius: 4, boxShadow: 6, overflow: 'hidden', p: { xs: 2, sm: 4 } }}>
           <CardContent>
             <Typography
@@ -84,20 +106,6 @@ const Contact = () => {
                     </Typography>
                   </Box>
                 </Stack>
-                <Divider sx={{ my: 3, display: { xs: 'block', md: 'none' } }} />
-                {/* Google Map */}
-                <Box sx={{ mt: 3, borderRadius: 2, overflow: 'hidden', boxShadow: 2 }}>
-                  <iframe
-                    title="Party Location"
-                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3975.857964073964!2d37.00000000000001!3d-1.0000000000000002!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x182f1a0000000001%3A0x0000000000000001!2sNairobi!5e0!3m2!1sen!2ske!4v1680000000000!5m2!1sen!2ske"
-                    width="100%"
-                    height="180"
-                    style={{ border: 0 }}
-                    allowFullScreen=""
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                  ></iframe>
-                </Box>
               </Grid>
               <Grid item xs={12} md={6}>
                 <Box component="form" noValidate autoComplete="off">
@@ -155,6 +163,51 @@ const Contact = () => {
                   </Button>
                 </Box>
               </Grid>
+            </Grid>
+            <Divider sx={{ my: 5 }} />
+            <Typography
+              variant="h5"
+              component="h2"
+              sx={{ mb: 3, color: 'primary.main', fontWeight: 'bold', textAlign: 'center' }}
+            >
+              Find Us
+            </Typography>
+            <Grid container spacing={3}>
+              {officeLocations.map((location) => (
+                <Grid item xs={12} md={4} key={location.name}>
+                  <Box
+                    sx={{
+                      height: '100%',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                      backgroundColor: 'background.paper',
+                    }}
+                  >
+                    <Box sx={{ p: 2 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.dark' }}>
+                        {location.name}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {location.address}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ height: { xs: 250, md: 280 } }}>
+                      <iframe
+                        title={`Map showing ${location.name}`}
+                        src={`https://www.google.com/maps?q=${location.query}&z=${location.zoom}&output=embed`}
+                        width="100%"
+                        height="100%"
+                        style={{ border: 0, display: 'block' }}
+                        allowFullScreen=""
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                      />
+                    </Box>
+                  </Box>
+                </Grid>
+              ))}
             </Grid>
           </CardContent>
         </Card>

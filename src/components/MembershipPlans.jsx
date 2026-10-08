@@ -84,6 +84,10 @@ const MembershipPlans = () => {
     }
   ];
 
+  const handlePlanSelect = (planTitle) => {
+    navigate(`/volunteer?plan=${encodeURIComponent(planTitle)}`);
+  };
+
   const handleJoinNow = () => {
     navigate('/volunteer');
   };
@@ -120,7 +124,13 @@ const MembershipPlans = () => {
         <Grid container spacing={{ xs: 2, sm: 3 }}>
           {plans.map((plan, index) => (
             <Grid item xs={12} sm={6} md={2.4} key={index}>
-              <StyledCard>
+              <StyledCard
+                component="button"
+                type="button"
+                aria-label={`Apply for ${plan.title} membership`}
+                onClick={() => handlePlanSelect(plan.title)}
+                sx={{ width: '100%', textAlign: 'left', backgroundColor: 'background.paper' }}
+              >
                 <CardContent sx={{ 
                   p: { xs: 2, sm: 3 },
                   display: 'flex',

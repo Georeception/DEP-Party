@@ -294,7 +294,7 @@ const RulesRegulations = () => {
         tag="Constitution"
         title="Party Constitution"
         subtitle="The fundamental principles and guidelines that govern our party"
-        image="/images/rules.jpg"
+        image="/images/com.jpeg"
       >
           <Box sx={{ display: 'flex', justifyContent: 'flex-start', mt: 4 }}>
             <Button

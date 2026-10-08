@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Container, Typography, Grid, Card, CardMedia, CardContent, CircularProgress } from '@mui/material';
+import { Box, Container, Typography, Grid, Card, CardMedia, CardContent, CircularProgress, Pagination } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { leadershipApi } from '../../services/api';
 import PageHero from '../PageHero';
+
+const ITEMS_PER_PAGE = 9;
 
 const LeadershipCard = styled(Card)(({ theme }) => ({
   height: '100%',
@@ -19,13 +21,14 @@ const LeadershipCard = styled(Card)(({ theme }) => ({
 
 const NationalLeadership = () => {
   const [leaders, setLeaders] = useState([]);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchLeaders = async () => {
       try {
-        const response = await leadershipApi.getAll();
+        const response = await leadershipApi.getAll({ fetchAll: true });
         // The response data might be nested in a results array
         const leaders = response.data?.results || response.data || [];
         setLeaders(Array.isArray(leaders) ? leaders : []);
@@ -39,6 +42,8 @@ const NationalLeadership = () => {
 
     fetchLeaders();
   }, []);
+
+  const visibleLeaders = leaders.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   if (loading) {
     return (
@@ -62,14 +67,14 @@ const NationalLeadership = () => {
         tag="Leadership"
         title="National Leadership"
         subtitle="Meet our dedicated team of leaders"
-        image="/images/leadership.jpg"
+        image="/images/nat.jpg"
       />
 
       {/* Leadership Cards Section */}
       <Container maxWidth="lg">
         <Grid container spacing={4}>
           {leaders && leaders.length > 0 ? (
-            leaders.map((leader) => (
+            visibleLeaders.map((leader) => (
               <Grid item xs={12} md={4} key={leader.id}>
                 <LeadershipCard>
                   <CardMedia
@@ -90,9 +95,6 @@ const NationalLeadership = () => {
                     <Typography variant="h6" color="primary.main" sx={{ mb: 2 }}>
                       {leader.position?.title || 'Position'}
                     </Typography>
-                    <Typography variant="body1">
-                      {leader.bio}
-                    </Typography>
                   </CardContent>
                 </LeadershipCard>
               </Grid>
@@ -105,6 +107,16 @@ const NationalLeadership = () => {
             </Grid>
           )}
         </Grid>
+        {leaders.length > ITEMS_PER_PAGE && (
+          <Pagination
+            count={Math.ceil(leaders.length / ITEMS_PER_PAGE)}
+            page={page}
+            onChange={(event, value) => setPage(value)}
+            color="primary"
+            aria-label="Leadership pages"
+            sx={{ display: 'flex', justifyContent: 'center', my: 5 }}
+          />
+        )}
       </Container>
     </Box>
   );

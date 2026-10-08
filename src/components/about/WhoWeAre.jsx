@@ -67,20 +67,16 @@ const WhoWeAre = () => {
 
   const carouselImages = [
     {
-      src: '/images/bus.png',
-      alt: 'Party Campaign Bus'
+      src: '/images/amb.jfif',
+      alt: 'Youth Ambassadors'
     },
     {
-      src: '/images/meet.png',
-      alt: 'Party Rally'
+      src: '/images/caps.jpeg',
+      alt: 'Members'
     },
     {
-      src: '/images/leadership.jpg',
-      alt: 'Party Leadership'
-    },
-    {
-      src: '/images/protect.jpg',
-      alt: 'Community Engagement'
+      src: '/images/metting.jpeg',
+      alt: 'Commitment to Community'
     }
   ];
 
@@ -121,7 +117,7 @@ const WhoWeAre = () => {
         tag="About"
         title="Who We Are"
         subtitle="A progressive movement dedicated to Kenya's future"
-        image="/images/bus.png"
+        image="/images/who.jpeg"
       />
 
       <Container maxWidth="lg">
@@ -275,7 +271,7 @@ const WhoWeAre = () => {
                 }}
               >
                 <img
-                  src="/images/leadership.jpg"
+                  src="/images/walk.jpeg"
                   alt="Party Leadership"
                   style={{
                     width: '100%',
@@ -298,7 +294,7 @@ const WhoWeAre = () => {
                     Building a Stronger Kenya Together
                   </Typography>
                   <Typography variant="body2">
-                    Our leadership team working with communities to create lasting change
+                    Our leadership team working to create lasting change
                   </Typography>
                 </Box>
               </Box>

@@ -9,7 +9,8 @@ import {
   CardMedia, 
   CircularProgress, 
   Alert,
-  Button
+  Button,
+  Pagination
 } from '@mui/material';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import ReadMoreIcon from '@mui/icons-material/ReadMore';
@@ -17,8 +18,11 @@ import { useNavigate } from 'react-router-dom';
 import PageHero from '../components/PageHero';
 import { newsApi } from '../services/api';
 
+const ITEMS_PER_PAGE = 9;
+
 const News = () => {
   const [news, setNews] = useState([]);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -38,7 +42,7 @@ const News = () => {
   useEffect(() => {
     const fetchNews = async () => {
       try {
-        const response = await newsApi.getAll();
+        const response = await newsApi.getAll({ fetchAll: true });
         //console.log('News API Response:', response);
         
         if (response && response.data && response.data.results) {
@@ -73,6 +77,8 @@ const News = () => {
     navigate(`/news/${articleId}`);
   };
 
+  const visibleNews = news.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
@@ -97,6 +103,7 @@ const News = () => {
         tag="News"
         title="Latest News"
         subtitle="Stay informed with updates from across our movement and the communities we serve."
+        image="/images/news.jpg"
       />
       <Container maxWidth="lg" sx={{ py: 8 }}>
         {!Array.isArray(news) || news.length === 0 ? (
@@ -110,7 +117,7 @@ const News = () => {
           </Box>
         ) : (
           <Grid container spacing={4}>
-            {news.map((article) => {
+            {visibleNews.map((article) => {
               //console.log('Article data:', article);
               return (
                 <Grid item xs={12} md={4} key={article.id}>
@@ -137,7 +144,7 @@ const News = () => {
                       <CardMedia
                         component="img"
                         height="240"
-                        image={article.image || '/images/placeholder.jpg'}
+                        image={article.image || '/images/news.jpg'}
                         alt={article.title}
                         className="news-image"
                         sx={{ transition: 'transform 0.3s ease-in-out' }}
@@ -191,6 +198,16 @@ const News = () => {
               );
             })}
           </Grid>
+        )}
+        {news.length > ITEMS_PER_PAGE && (
+          <Pagination
+            count={Math.ceil(news.length / ITEMS_PER_PAGE)}
+            page={page}
+            onChange={(event, value) => setPage(value)}
+            color="primary"
+            aria-label="News pages"
+            sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}
+          />
         )}
       </Container>
     </Box>

@@ -105,7 +105,7 @@ const ElectionIntegrity = () => {
         tag="Integrity"
         title="Election Integrity"
         subtitle="Ensuring fair elections and building a prosperous future for Kenya"
-        image={`/images/${activeSection === 'empower' ? 'elections.jpg' : 'protect.jpg'}`}
+        image={`/images/${activeSection === 'empower' ? 'tog.jpeg' : 'shake.jpeg'}`}
       />
 
       {/* Navigation Tabs */}

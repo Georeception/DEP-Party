@@ -117,7 +117,8 @@ const Donate = () => {
       <PageHero
         tag="Donate"
         title="Support Our Movement"
-        subtitle="Your contribution helps us build a stronger future for our community. Every donation makes a difference in our mission to create positive change."
+        subtitle="Every donation makes a difference in our mission to create positive change."
+        image="/images/donate.png"
       />
       <Container maxWidth="md" sx={{ pb: { xs: 5, md: 8 } }}>
         <StyledPaper>

@@ -180,23 +180,45 @@ const Header = () => {
         {navItems.map((item) => {
           if (item.isMenu) {
             return (
-              <ListItem
-                key={item.label}
-                onClick={() => setAboutOpen((prev) => !prev)}
-                sx={{
-                  cursor: 'pointer',
-                  minHeight: 48,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  '&:hover': {
-                    backgroundColor: '#f5f6f2',
-                  },
-                }}
-              >
-                <ListItemText primary={item.label} />
-                <ArrowDropDownIcon sx={{ transform: aboutOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.2s' }} />
-              </ListItem>
+              <React.Fragment key={item.label}>
+                <ListItem
+                  onClick={() => setAboutOpen((prev) => !prev)}
+                  aria-expanded={aboutOpen}
+                  sx={{
+                    cursor: 'pointer',
+                    minHeight: 48,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    '&:hover': {
+                      backgroundColor: '#f5f6f2',
+                    },
+                  }}
+                >
+                  <ListItemText primary={item.label} />
+                  <ArrowDropDownIcon sx={{ transform: aboutOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.2s' }} />
+                </ListItem>
+                {aboutOpen && (
+                  <List component="div" disablePadding>
+                    {aboutMenuItems.map((aboutItem) => (
+                      <ListItem
+                        key={aboutItem.path}
+                        onClick={() => handleMenuItemClick(aboutItem.path)}
+                        sx={{
+                          pl: 4,
+                          cursor: 'pointer',
+                          minHeight: 48,
+                          '&:hover': {
+                            backgroundColor: '#f5f6f2',
+                          },
+                        }}
+                      >
+                        <ListItemText primary={aboutItem.label} />
+                      </ListItem>
+                    ))}
+                  </List>
+                )}
+              </React.Fragment>
             );
           }
           return (
@@ -215,23 +237,6 @@ const Header = () => {
             </ListItem>
           );
         })}
-        {/* About Submenu */}
-        {aboutOpen && aboutMenuItems.map((item) => (
-          <ListItem
-            key={item.path}
-            onClick={() => handleMenuItemClick(item.path)}
-            sx={{
-              pl: 4,
-              cursor: 'pointer',
-              minHeight: 48,
-              '&:hover': {
-                backgroundColor: '#f5f6f2',
-              },
-            }}
-          >
-            <ListItemText primary={item.label} />
-          </ListItem>
-        ))}
         {/* Add Login to mobile menu */}
         <ListItem
           component={Link}

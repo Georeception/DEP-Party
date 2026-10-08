@@ -10,7 +10,8 @@ import {
   CircularProgress, 
   Alert,
   Button,
-  Chip
+  Chip,
+  Pagination
 } from '@mui/material';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -19,8 +20,11 @@ import { useNavigate } from 'react-router-dom';
 import PageHero from '../components/PageHero';
 import { eventsApi, getApiUrl } from '../services/api';
 
+const ITEMS_PER_PAGE = 9;
+
 const Events = () => {
   const [events, setEvents] = useState([]);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -63,7 +67,7 @@ const Events = () => {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const response = await eventsApi.getAll();
+        const response = await eventsApi.getAll({ fetchAll: true });
         //console.log('Events API Response:', JSON.stringify(response, null, 2));
         
         // Check if response has data property and results array
@@ -112,6 +116,8 @@ const Events = () => {
     navigate(`/events/${eventId}`);
   };
 
+  const visibleEvents = events.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
@@ -136,6 +142,7 @@ const Events = () => {
         tag="Community"
         title="Events"
         subtitle="Join us at upcoming gatherings, town halls, and community moments across the country."
+        image="/images/events.jpg"
       />
       <Container maxWidth="lg" sx={{ py: 8 }}>
         {!Array.isArray(events) || events.length === 0 ? (
@@ -149,7 +156,7 @@ const Events = () => {
           </Box>
         ) : (
           <Grid container spacing={4}>
-            {events.map((event) => {
+            {visibleEvents.map((event) => {
               //console.log('Event data:', event);
               return (
                 <Grid item xs={12} md={4} key={event.id}>
@@ -262,6 +269,16 @@ const Events = () => {
               );
             })}
           </Grid>
+        )}
+        {events.length > ITEMS_PER_PAGE && (
+          <Pagination
+            count={Math.ceil(events.length / ITEMS_PER_PAGE)}
+            page={page}
+            onChange={(event, value) => setPage(value)}
+            color="primary"
+            aria-label="Event pages"
+            sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}
+          />
         )}
       </Container>
     </Box>

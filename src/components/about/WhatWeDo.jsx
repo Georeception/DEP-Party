@@ -115,7 +115,7 @@ const Campaign = () => {
         tag="Agenda"
         title="Campaign Roadmap"
         subtitle="Our journey to transform Kenya"
-        image="/images/campaign.jpg"
+        image="/images/commit.jpg"
       />
 
       {/* Roadmap Section */}

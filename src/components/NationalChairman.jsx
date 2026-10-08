@@ -5,9 +5,7 @@ import { leadershipApi } from '../services/api';
 
 
 const NationalChairman = () => {
-  const [chairman, setChairman] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [partyLeader, setPartyLeader] = useState(null);
 
   const values = [
     'Peace, Love,',
@@ -15,27 +13,23 @@ const NationalChairman = () => {
   ];
 
   useEffect(() => {
-    const fetchChairman = async () => {
+    const fetchPartyLeader = async () => {
       try {
         const response = await leadershipApi.getAll();
-        // The response data might be nested in a results array
         const leaders = response.data?.results || response.data || [];
-        const chairmanData = Array.isArray(leaders) 
-          ? leaders.find(leader => 
-              leader.position?.name?.toLowerCase().includes('chairman') ||
-              leader.position?.title?.toLowerCase().includes('chairman')
-            )
+        const leaderData = Array.isArray(leaders)
+          ? leaders.find(leader => {
+              const title = leader.position?.title?.toLowerCase() || '';
+              return title.includes('party leader') || title.includes('leader of the party');
+            })
           : null;
-        setChairman(chairmanData);
-        setLoading(false);
+        setPartyLeader(leaderData || null);
       } catch (err) {
-        console.error('Error fetching chairman data:', err);
-        setError('Failed to load chairman data');
-        setLoading(false);
+        console.error('Error fetching party leader data:', err);
       }
     };
 
-    fetchChairman();
+    fetchPartyLeader();
   }, []);
 
   return (
@@ -43,11 +37,11 @@ const NationalChairman = () => {
       <Container maxWidth="lg">
         <Grid container spacing={6} alignItems="center">
           <Grid item xs={12} md={6}>
-            {chairman && chairman.image && (
+            {partyLeader?.image && (
               <Box
                 component="img"
-                src={chairman.image}
-                alt={`${chairman.name} - National Chairman`}
+                src={partyLeader.image}
+                alt={`${partyLeader.name} - Party Leader`}
                 sx={{
                   width: '100%',
                   height: 'auto',
@@ -70,7 +64,7 @@ const NationalChairman = () => {
                 mb: 3,
               }}
             >
-              {chairman?.name || ''}
+              {partyLeader?.name || ''}
             </Typography>
             <Typography
               variant="h5"
@@ -79,20 +73,43 @@ const NationalChairman = () => {
                 mb: 2,
               }}
             >
-              {chairman?.position?.title || ''}
+              {partyLeader?.position?.title || 'Party Leader'}
             </Typography>
-            <Typography 
-              variant="body1" 
-              sx={{ 
-                mb: 4,
-                color: 'white',
-                fontSize: '1.1rem',
-                lineHeight: 1.8,
-                textAlign: 'justify',
-              }}
-            >
-              {chairman?.bio || chairman?.position?.description || "As Chairman of the Devolution Party of Kenya, I am honored to lead a movement committed to fairness, equity, and true grassroots empowerment. We believe that real change begins at the local level and grows through unity, integrity, and service. Join us as we build a stronger, more inclusive Kenya for all."}
-            </Typography>
+            {partyLeader?.bio && (
+              <Box
+                component="div"
+                sx={{
+                  mb: 4,
+                  p: { xs: 2.5, md: 3 },
+                  borderRadius: 2,
+                  backgroundColor: 'rgba(255, 255, 255, 0.96)',
+                  color: 'text.primary',
+                  fontSize: '1rem',
+                  lineHeight: 1.8,
+                  '& > :first-of-type': { mt: 0 },
+                  '& > :last-child': { mb: 0 },
+                  '& p': { my: 1.5 },
+                  '& h2, & h3, & h4': {
+                    mt: 2.5,
+                    mb: 1,
+                    color: 'primary.dark',
+                    lineHeight: 1.3,
+                  },
+                  '& ul, & ol': { pl: 3, my: 1.5 },
+                  '& li': { mb: 0.5, pl: 0.5 },
+                  '& blockquote': {
+                    my: 2,
+                    pl: 2,
+                    borderLeft: '3px solid',
+                    borderColor: 'primary.main',
+                    color: 'text.secondary',
+                  },
+                  '& a': { color: 'primary.dark', textDecoration: 'underline' },
+                  '& img': { maxWidth: '100%', height: 'auto' },
+                }}
+                dangerouslySetInnerHTML={{ __html: partyLeader.bio }}
+              />
+            )}
             <Box sx={{ mt: 4 }}>
               {values.map((value, index) => (
                 <Box

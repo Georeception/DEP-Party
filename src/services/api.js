@@ -32,6 +32,28 @@ const api = axios.create({
     withCredentials: false,
 });
 
+const fetchAllPages = async (url, params = {}) => {
+    const results = [];
+    let page = 1;
+    let hasNextPage = true;
+
+    while (hasNextPage) {
+        const response = await api.get(url, { params: { ...params, page } });
+        const data = response.data;
+        const pageResults = Array.isArray(data) ? data : data?.results;
+
+        if (!Array.isArray(pageResults)) {
+            return Array.isArray(data) ? data : [];
+        }
+
+        results.push(...pageResults);
+        hasNextPage = Boolean(data?.next);
+        page += 1;
+    }
+
+    return results;
+};
+
 // Add token to requests if it exists
 api.interceptors.request.use((config) => {
     const skipAuth = config.skipAuth;
@@ -174,17 +196,21 @@ export const membershipApi = {
 
 // News API
 export const newsApi = {
-    getAll: async () => {
+    getAll: async ({ fallbackOnError = true, fetchAll = false } = {}) => {
         try {
-            const response = await api.get('/news/');
-            const data = response.data?.results || response.data || [];
+            const responseData = fetchAll
+                ? await fetchAllPages('/news/')
+                : (await api.get('/news/')).data;
+            const data = Array.isArray(responseData)
+                ? responseData
+                : responseData?.results || responseData || [];
             // Transform image URLs
             const transformedData = Array.isArray(data) ? data.map(item => ({
                 ...item,
-                image: getImageUrl(item.image)
+                image: getImageUrl(item.preview_image_url || item.preview_image || item.image_url || item.image)
             })) : [data].map(item => ({
                 ...item,
-                image: getImageUrl(item.image)
+                image: getImageUrl(item.preview_image_url || item.preview_image || item.image_url || item.image)
             }));
             return { 
                 data: {
@@ -193,6 +219,7 @@ export const newsApi = {
             };
         } catch (error) {
             console.error('Error fetching news:', error);
+            if (!fallbackOnError) throw error;
             return { data: { results: defaultData.news } };
         }
     },
@@ -211,7 +238,12 @@ export const newsApi = {
             return { 
                 data: {
                     ...response.data,
-                    image: getImageUrl(response.data.image)
+                    image: getImageUrl(
+                        response.data.preview_image_url ||
+                        response.data.preview_image ||
+                        response.data.image_url ||
+                        response.data.image
+                    )
                 }
             };
         } catch (error) {
@@ -223,17 +255,21 @@ export const newsApi = {
 
 // Events API
 export const eventsApi = {
-    getAll: async () => {
+    getAll: async ({ fallbackOnError = true, fetchAll = false } = {}) => {
         try {
-            const response = await api.get('/events/');
-            const data = response.data?.results || response.data || [];
+            const responseData = fetchAll
+                ? await fetchAllPages('/events/')
+                : (await api.get('/events/')).data;
+            const data = Array.isArray(responseData)
+                ? responseData
+                : responseData?.results || responseData || [];
             // Transform image URLs
             const transformedData = Array.isArray(data) ? data.map(item => ({
                 ...item,
-                image: getImageUrl(item.image)
+                image: getImageUrl(item.preview_image_url || item.preview_image || item.image_url || item.image)
             })) : [data].map(item => ({
                 ...item,
-                image: getImageUrl(item.image)
+                image: getImageUrl(item.preview_image_url || item.preview_image || item.image_url || item.image)
             }));
             return { 
                 data: {
@@ -242,6 +278,7 @@ export const eventsApi = {
             };
         } catch (error) {
             console.error('Error fetching events:', error);
+            if (!fallbackOnError) throw error;
             return { data: { results: defaultData.events } };
         }
     },
@@ -260,7 +297,12 @@ export const eventsApi = {
             return { 
                 data: {
                     ...response.data,
-                    image: getImageUrl(response.data.image)
+                    image: getImageUrl(
+                        response.data.preview_image_url ||
+                        response.data.preview_image ||
+                        response.data.image_url ||
+                        response.data.image
+                    )
                 }
             };
         } catch (error) {
@@ -272,26 +314,26 @@ export const eventsApi = {
 
 // Gallery API
 export const galleryApi = {
-    getAll: async () => {
+    getAll: async ({ fetchAll = false } = {}) => {
         try {
-            const response = await api.get('/gallery/');
-            const data = response.data;
-            // Transform image URLs
-            const transformedData = {
-                ...data,
-                images: data.images?.map(item => ({
-                    ...item,
-                    image: getImageUrl(item.image)
-                })) || [],
-                videos: data.videos?.map(item => ({
-                    ...item,
-                    thumbnail: getImageUrl(item.thumbnail)
-                })) || []
-            };
-            return { data: transformedData };
+            const responseData = fetchAll
+                ? await fetchAllPages('/gallery/')
+                : (await api.get('/gallery/')).data;
+            const mediaItems = Array.isArray(responseData)
+                ? responseData
+                : responseData?.results || [
+                    ...(responseData?.images || []),
+                    ...(responseData?.videos || [])
+                ];
+            const transformedData = mediaItems.map(item => ({
+                ...item,
+                image: getImageUrl(item.image_url || item.image),
+                thumbnail: getImageUrl(item.thumbnail_url || item.thumbnail)
+            }));
+            return { data: { results: transformedData } };
         } catch (error) {
             console.error('Error fetching gallery:', error);
-            return { data: [...defaultData.gallery.images, ...defaultData.gallery.videos] };
+            return { data: { results: [...defaultData.gallery.images, ...defaultData.gallery.videos] } };
         }
     },
     getByCategory: async (category) => {
@@ -316,10 +358,14 @@ export const galleryApi = {
 
 // Leadership API
 export const leadershipApi = {
-    getAll: async () => {
+    getAll: async ({ fetchAll = false } = {}) => {
         try {
-            const response = await api.get('/leadership/');
-            const data = response.data?.results || response.data || [];
+            const responseData = fetchAll
+                ? await fetchAllPages('/leadership/')
+                : (await api.get('/leadership/')).data;
+            const data = Array.isArray(responseData)
+                ? responseData
+                : responseData?.results || responseData || [];
             // Transform image URLs
             const transformedData = Array.isArray(data) ? data.map(item => ({
                 ...item,
@@ -353,8 +399,11 @@ export const leadershipApi = {
 // Shop API
 export const shopApi = {
     // Products
-    getProducts: async (params = {}) => {
+    getProducts: async (params = {}, { fetchAll = false } = {}) => {
         try {
+            if (fetchAll) {
+                return await fetchAllPages('/products/', params);
+            }
             const response = await api.get('/products/', { params });
             // Ensure we return an array even if the API returns an object
             return Array.isArray(response.data) ? response.data : response.data.results || [];

@@ -12,11 +12,14 @@ import {
   useTheme,
   useMediaQuery,
   CircularProgress,
-  Alert
+  Alert,
+  Pagination
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { galleryApi } from '../../services/api';
 import PageHero from '../PageHero';
+
+const ITEMS_PER_PAGE = 9;
 
 const StyledCard = styled(Card)(({ theme }) => ({
   height: '100%',
@@ -48,6 +51,7 @@ const StyledVideo = styled('video')(({ theme }) => ({
 
 const Gallery = () => {
   const [activeTab, setActiveTab] = useState(0);
+  const [page, setPage] = useState(1);
   const [images, setImages] = useState([]);
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +62,7 @@ const Gallery = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await galleryApi.getAll();
+        const response = await galleryApi.getAll({ fetchAll: true });
         //console.log('Gallery API Response:', response);
         
         // Handle paginated response
@@ -86,7 +90,11 @@ const Gallery = () => {
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
+    setPage(1);
   };
+
+  const activeItems = activeTab === 0 ? images : videos;
+  const visibleItems = activeItems.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   if (loading) {
     return (
@@ -163,7 +171,7 @@ const Gallery = () => {
               <Grid container spacing={4}>
                 {activeTab === 0 ? (
                   // Photos Tab
-                  images.map((item) => (
+                  visibleItems.map((item) => (
                     <Grid item xs={12} sm={6} md={4} key={item.id}>
                       <StyledCard>
                         <Box sx={{ position: 'relative', overflow: 'hidden' }}>
@@ -190,7 +198,7 @@ const Gallery = () => {
                   ))
                 ) : (
                   // Videos Tab
-                  videos.map((item) => (
+                  visibleItems.map((item) => (
                     <Grid item xs={12} sm={6} md={4} key={item.id}>
                       <StyledCard>
                         <Box sx={{ position: 'relative', overflow: 'hidden' }}>
@@ -221,6 +229,17 @@ const Gallery = () => {
               </Grid>
             )}
           </>
+        )}
+        {activeItems.length > ITEMS_PER_PAGE && (
+          <Pagination
+            count={Math.ceil(activeItems.length / ITEMS_PER_PAGE)}
+            page={page}
+            onChange={(event, value) => setPage(value)}
+            color="primary"
+            siblingCount={isMobile ? 0 : 1}
+            aria-label={activeTab === 0 ? 'Photo pages' : 'Video pages'}
+            sx={{ display: 'flex', justifyContent: 'center', my: 5 }}
+          />
         )}
       </Container>
     </Box>
