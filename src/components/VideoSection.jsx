@@ -10,7 +10,7 @@ const VideoSection = () => {
   useEffect(() => {
     const fetchLatestVideo = async () => {
       try {
-        const { data } = await galleryApi.getAll();
+        const { data } = await galleryApi.getAll({ fetchAll: true });
         const items = data.results || [];
         const videos = items.filter(item => item.media_type === 'video');
         if (videos.length > 0) {
