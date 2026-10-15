@@ -289,7 +289,7 @@ const Header = () => {
                 ml: { xs: 0, md: 0 },
               }}
             >
-              DEVOLUTION EMPOWERMENT PARTY: THE MBUS PARTY
+              DEVOLUTION EMPOWERMENT PARTY: THE BUS PARTY
             </Typography>
           </Toolbar>
         </Container>
