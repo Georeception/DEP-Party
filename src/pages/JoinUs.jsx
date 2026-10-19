@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -19,12 +19,21 @@ import {
   Step,
   StepLabel,
   FormHelperText,
+  Chip,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import PageHero from '../components/PageHero';
 import { styled } from '@mui/material/styles';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { loadPaystack } from '../services/paystack';
 import { locationApi, membershipApi } from '../services/api';
+import {
+  getMembershipAmount,
+  isFreeRegistrationPeriod,
+  membershipCategories,
+  membershipPlans,
+} from '../data/membershipPlans';
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(4),
@@ -37,7 +46,9 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
   },
 }));
 
-const MembershipCard = styled(Card)(({ theme, selected }) => ({
+const MembershipCard = styled(Card, {
+  shouldForwardProp: (prop) => prop !== 'selected',
+})(({ theme, selected }) => ({
   height: '100%',
   display: 'flex',
   flexDirection: 'column',
@@ -45,6 +56,10 @@ const MembershipCard = styled(Card)(({ theme, selected }) => ({
   border: '1px solid',
   borderColor: selected ? theme.palette.primary.main : theme.palette.primary.light,
   cursor: 'pointer',
+  '&:focus-visible': {
+    outline: `3px solid ${theme.palette.secondary.main}`,
+    outlineOffset: 2,
+  },
   '&:hover': {
     transform: 'translateY(-8px)',
     borderColor: theme.palette.primary.main,
@@ -58,13 +73,20 @@ const MembershipCard = styled(Card)(({ theme, selected }) => ({
 }));
 
 const JoinUs = () => {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const requestedPlan = searchParams.get('plan');
-  const allowedPlans = ['Mwananchi', 'Bronze', 'Silver', 'Gold', 'Platinum'];
-  const initialPlan = allowedPlans.includes(requestedPlan) ? requestedPlan : null;
+  const requestedCategory = searchParams.get('category');
+  const requestedCategoryIsValid = membershipCategories.some(({ id }) => id === requestedCategory);
+  const initialCategory = requestedCategoryIsValid ? requestedCategory : 'general';
+  const initialPlan = membershipPlans.find((plan) => (
+    plan.id === requestedPlan || plan.title === requestedPlan
+  ));
   const [activeStep, setActiveStep] = useState(initialPlan ? 1 : 0);
-  const [selectedPlan, setSelectedPlan] = useState(initialPlan);
+  const [selectedPlan, setSelectedPlan] = useState(initialPlan?.id || null);
+  const [selectedCategory, setSelectedCategory] = useState(
+    initialPlan?.id === 'mwananchi' && initialCategory === 'youth_pwd' ? 'general' : initialCategory
+  );
+  const [registrationIsFree, setRegistrationIsFree] = useState(isFreeRegistrationPeriod);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingPayment, setPendingPayment] = useState(null);
   const [locations, setLocations] = useState({
@@ -88,83 +110,15 @@ const JoinUs = () => {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
 
-  // Debug log for form data changes
-  useEffect(() => {
-    //console.log('Form Data Updated:', formData);
-  }, [formData]);
+  const selectedPlanDetails = membershipPlans.find((plan) => plan.id === selectedPlan);
+  const selectedAmount = getMembershipAmount(selectedPlanDetails, selectedCategory);
+  const requiresPayment = selectedAmount > 0 && !registrationIsFree;
 
-  // Debug log for locations changes
   useEffect(() => {
-    //console.log('Locations Updated:', locations);
-  }, [locations]);
-
-  const plans = [
-    {
-      title: 'Mwananchi',
-      type: 'member',
-      category: 'Welcome',
-      features: [
-        'Ordinary Citizens',
-        'Driving grassroots efforts',
-        'Building the party\'s strength'
-      ],
-      label: 'Foundation of our Party',
-      requiresPayment: false,
-      amount: 0
-    },
-    {
-      title: 'Bronze',
-      type: 'member',
-      category: 'Officials',
-      features: [
-        'County-level officials',
-        'Representative of party in counties',
-        'Effective local governance'
-      ],
-      label: 'Branch Officials',
-      requiresPayment: true,
-      amount: 5000
-    },
-    {
-      title: 'Silver',
-      type: 'member',
-      category: 'Aspirants',
-      features: [
-        'Officials/MCA',
-        'Top 6 branch officials',
-        'Core leadership at the sub-county level'
-      ],
-      label: 'Aspirants',
-      requiresPayment: true,
-      amount: 10000
-    },
-    {
-      title: 'Gold',
-      type: 'member',
-      category: 'Aspirant',
-      features: [
-        'NEC/MP/Senate aspirants',
-        'NEC officials, and MP and Senate aspirants',
-        'Fostering high-level legislative within the party'
-      ],
-      label: 'Aspirants',
-      requiresPayment: true,
-      amount: 25000
-    },
-    {
-      title: 'Platinum',
-      type: 'member',
-      category: 'Aspirant',
-      features: [
-        'Top leadership/Governor',
-        'Top leadership aspirants',
-        'Party Governance and strategic decision-making'
-      ],
-      label: 'Aspirants',
-      requiresPayment: true,
-      amount: 50000
-    }
-  ];
+    const refreshRegistrationPeriod = () => setRegistrationIsFree(isFreeRegistrationPeriod());
+    const timer = window.setInterval(refreshRegistrationPeriod, 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const steps = ['Select Membership Plan', 'Personal Information', 'Payment'];
 
@@ -242,23 +196,22 @@ const JoinUs = () => {
     }));
   };
 
-  const handlePlanSelect = (planTitle) => {
-    setSelectedPlan(planTitle);
-    setActiveStep(1); // Always go to personal info step first
+  const handlePlanSelect = (planId) => {
+    setSelectedPlan(planId);
+    setActiveStep(1);
   };
 
   const handleNext = () => {
-    // Validate required fields before proceeding
     if (activeStep === 1) {
       const requiredFields = ['firstName', 'lastName', 'phone', 'age', 'occupation', 'county', 'constituency', 'ward', 'gender'];
-      if (selectedPlan !== 'Mwananchi') requiredFields.push('email');
+      if (requiresPayment) requiredFields.push('email');
       const missingFields = requiredFields.filter(field => !formData[field]);
       
       if (missingFields.length > 0) {
         setError('Please fill in all required fields marked with *');
         return;
       }
-      if (selectedPlan !== 'Mwananchi' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      if (requiresPayment && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
         setError('Enter a valid email address for Paystack checkout.');
         return;
       }
@@ -276,11 +229,19 @@ const JoinUs = () => {
     if (isSubmitting) return;
     setError('');
 
+    const freeRegistration = isFreeRegistrationPeriod();
+    setRegistrationIsFree(freeRegistration);
+    const paymentRequired = selectedAmount > 0 && !freeRegistration;
     const requiredFields = ['firstName', 'lastName', 'phone', 'age', 'occupation', 'county', 'constituency', 'ward', 'gender'];
-    if (selectedPlan !== 'Mwananchi') requiredFields.push('email');
+    if (paymentRequired) requiredFields.push('email');
     const missingFields = requiredFields.filter(field => !formData[field]);
     if (missingFields.length > 0) {
       setError('Please fill in all required fields marked with *');
+      return;
+    }
+
+    if (paymentRequired && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      setError('Enter a valid email address for Paystack checkout.');
       return;
     }
 
@@ -295,19 +256,15 @@ const JoinUs = () => {
       county: formData.county,
       constituency: formData.constituency,
       ward: formData.ward,
-      membership_type: selectedPlan.toLowerCase(),
+      membership_type: selectedPlan,
+      membership_category: selectedCategory,
     };
 
-    if (selectedPlan === 'Mwananchi') {
+    if (!paymentRequired) {
       setIsSubmitting(true);
       try {
         await membershipApi.create(membershipData, false);
         setSubmitted(true);
-        navigate('/', {
-          state: {
-            message: 'Membership application successful! Thank you for joining us.'
-          }
-        });
       } catch (error) {
         console.error('Error submitting membership:', error);
         setError(error.response?.data?.detail || 'An error occurred while submitting your application. Please try again.');
@@ -345,12 +302,11 @@ const JoinUs = () => {
         setActiveStep(3);
         setIsSubmitting(false);
       } else {
-        const plan = plans.find(item => item.title === selectedPlan);
         const PaystackPop = await loadPaystack();
         const payment = PaystackPop.setup({
           key: publicKey,
           email: membershipData.email,
-          amount: plan.amount * 100,
+          amount: selectedAmount * 100,
           currency: 'KES',
           callback: async (response) => {
             try {
@@ -380,123 +336,108 @@ const JoinUs = () => {
     switch (step) {
       case 0:
         return (
-          <Grid container spacing={{ xs: 2, sm: 3 }}>
-            {plans.map((plan, index) => (
-              <Grid item xs={12} sm={6} md={2.4} key={index}>
-                <MembershipCard
-                  selected={selectedPlan === plan.title}
-                  onClick={() => handlePlanSelect(plan.title)}
-                >
-                  <CardContent sx={{ 
-                    p: { xs: 2, sm: 3 },
-                    display: 'flex',
-                    flexDirection: 'column',
-                    height: '100%',
-                  }}>
-                    <Typography 
-                      variant="h5" 
-                      sx={{ 
-                        mb: 1, 
-                        fontWeight: 'bold', 
-                        textAlign: 'center',
-                        color: 'primary.main',
-                        fontSize: { xs: '1.25rem', sm: '1.5rem' },
-                      }}
-                    >
-                      {plan.title}
-                    </Typography>
-                    <Typography
-                      variant="subtitle2"
-                      sx={{
-                        mb: 2,
-                        color: 'text.secondary',
-                        textAlign: 'center',
-                        textTransform: 'uppercase',
-                        letterSpacing: 1,
-                        fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                      }}
-                    >
-                      {plan.type}
-                    </Typography>
-                    <Box
-                      className="category-box"
-                      sx={{
-                        backgroundColor: 'primary.light',
-                        color: 'white',
-                        py: { xs: 0.5, sm: 1 },
-                        px: { xs: 1, sm: 2 },
-                        borderRadius: 2,
-                        mb: { xs: 2, sm: 3 },
-                        textAlign: 'center',
-                        transition: 'background-color 0.3s ease-in-out',
-                        fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                      }}
-                    >
-                      {plan.category}
-                    </Box>
-                    <Box sx={{ flexGrow: 1, mb: { xs: 2, sm: 3 } }}>
-                      {plan.features.map((feature, featureIndex) => (
-                        <Box
-                          key={featureIndex}
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            mb: { xs: 1, sm: 2 },
-                          }}
-                        >
-                          <CheckCircleOutlineIcon 
-                            sx={{ 
-                              mr: 1, 
-                              color: 'primary.main',
-                              mt: 0.3,
-                              fontSize: { xs: 16, sm: 20 },
-                            }} 
-                          />
-                          <Typography 
-                            variant="body2" 
-                            sx={{
-                              color: 'text.secondary',
-                              lineHeight: 1.4,
-                              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                            }}
-                          >
-                            {feature}
-                          </Typography>
-                        </Box>
-                      ))}
-                    </Box>
-                    {plan.requiresPayment && (
-                      <Typography
-                        variant="h6"
+          <>
+            <Box sx={{
+              mb: 3,
+              p: { xs: 2, sm: 2.5 },
+              borderRadius: 2,
+              bgcolor: 'success.light',
+              color: 'success.dark',
+            }}>
+              <Typography variant="h6" sx={{ mb: 0.5 }}>
+                {registrationIsFree ? 'Register for free until 30 November 2026' : 'Registration is open'}
+              </Typography>
+              <Typography variant="body2">
+                {registrationIsFree
+                  ? 'Every plan is free during the registration period. From 1 December, paid plans will continue through Paystack checkout.'
+                  : 'Choose a plan to see the fee and complete your application securely.'}
+              </Typography>
+            </Box>
+            <Tabs
+              value={selectedCategory}
+              onChange={(_, value) => {
+                setSelectedCategory(value);
+                if (value === 'youth_pwd' && selectedPlan === 'mwananchi') {
+                  setSelectedPlan(null);
+                  setActiveStep(0);
+                }
+              }}
+              aria-label="Membership pricing categories"
+              sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
+            >
+              {membershipCategories.map((category) => (
+                <Tab key={category.id} value={category.id} label={category.label} />
+              ))}
+            </Tabs>
+            <Grid container spacing={{ xs: 2, sm: 3 }}>
+              {membershipPlans
+                .filter((plan) => selectedCategory === 'general' || plan.youthAmount !== null)
+                .map((plan) => {
+                  const amount = getMembershipAmount(plan, selectedCategory);
+                  return (
+                    <Grid item xs={12} sm={6} md={4} key={plan.id}>
+                      <MembershipCard
+                        component="div"
+                        role="button"
+                        tabIndex={0}
+                        aria-pressed={selectedPlan === plan.id}
+                        selected={selectedPlan === plan.id}
+                        onClick={() => handlePlanSelect(plan.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            handlePlanSelect(plan.id);
+                          }
+                        }}
+                        aria-label={`Choose ${plan.title} membership`}
                         sx={{
-                          textAlign: 'center',
-                          color: 'primary.main',
-                          fontWeight: 'bold',
-                          mb: 1,
-                          fontSize: { xs: '1rem', sm: '1.25rem' },
+                          width: '100%',
+                          textAlign: 'left',
+                          bgcolor: selectedPlan === plan.id ? 'rgba(46, 139, 87, 0.06)' : 'background.paper',
                         }}
                       >
-                        KES {plan.amount.toLocaleString()}
-                      </Typography>
-                    )}
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        display: 'block',
-                        textAlign: 'center',
-                        fontStyle: 'italic',
-                        color: 'text.secondary',
-                        mt: 'auto',
-                        fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                      }}
-                    >
-                      {plan.label}
-                    </Typography>
-                  </CardContent>
-                </MembershipCard>
-              </Grid>
-            ))}
-          </Grid>
+                        <CardContent sx={{
+                          p: { xs: 2.5, sm: 3 },
+                          display: 'flex',
+                          flexDirection: 'column',
+                          minHeight: 285,
+                          height: '100%',
+                        }}>
+                          <Typography variant="h5" component="h2" sx={{ color: 'primary.dark', fontWeight: 800 }}>
+                            {plan.title}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 1, minHeight: 48 }}>
+                            {plan.description}
+                          </Typography>
+                          <Box sx={{ my: 2 }}>
+                            {registrationIsFree ? (
+                              <>
+                                <Chip size="small" color="success" label="FREE REGISTRATION" sx={{ mb: 0.75, fontWeight: 800 }} />
+                                <Typography variant="body2" color="text.secondary">
+                                  {amount === 0 ? 'Mwananchi membership remains free' : `KES ${amount.toLocaleString('en-KE')} from 1 December`}
+                                </Typography>
+                              </>
+                            ) : (
+                              <Typography variant="h5" sx={{ color: 'primary.main', fontWeight: 800 }}>
+                                {amount === 0 ? 'Always free' : `KES ${amount.toLocaleString('en-KE')}`}
+                              </Typography>
+                            )}
+                          </Box>
+                          <Box sx={{ mt: 'auto' }}>
+                            {plan.features.map((feature) => (
+                              <Box key={feature} sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
+                                <CheckCircleOutlineIcon sx={{ mr: 1, mt: '2px', color: 'primary.main', fontSize: 19 }} />
+                                <Typography variant="body2" color="text.secondary">{feature}</Typography>
+                              </Box>
+                            ))}
+                          </Box>
+                        </CardContent>
+                      </MembershipCard>
+                    </Grid>
+                  );
+                })}
+            </Grid>
+          </>
         );
       case 1:
         return renderPersonalInfoStep();
@@ -539,14 +480,14 @@ const JoinUs = () => {
           label="Email Address"
           name="email"
           type="email"
-          required={selectedPlan !== 'Mwananchi'}
+          required={requiresPayment}
           value={formData.email}
           onChange={handleChange}
-          error={Boolean(error) && selectedPlan !== 'Mwananchi'
+          error={Boolean(error) && requiresPayment
             && (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim()))}
-          helperText={Boolean(error) && !formData.email && selectedPlan !== 'Mwananchi'
+          helperText={Boolean(error) && !formData.email && requiresPayment
             ? 'Email address is required for Paystack'
-            : Boolean(formData.email) && selectedPlan !== 'Mwananchi'
+            : Boolean(formData.email) && requiresPayment
               && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())
               ? 'Enter a valid email address'
               : ''}
@@ -679,20 +620,20 @@ const JoinUs = () => {
   );
 
   const renderPaymentStep = () => {
-    if (selectedPlan === 'Mwananchi') {
+    if (!requiresPayment) {
       return (
         <Box sx={{ textAlign: 'center', py: 3 }}>
-          <Typography variant="h6" gutterBottom>
+          <Typography variant="h5" component="h2" gutterBottom sx={{ color: 'primary.dark', fontWeight: 800 }}>
             No Payment Required
           </Typography>
           <Typography variant="body1">
-            Mwananchi membership is free. Click submit to complete your application.
+            {selectedAmount === 0
+              ? 'Mwananchi membership is free. Submit your application to join.'
+              : 'Your registration is free through 30 November 2026. Submit your application to join now.'}
           </Typography>
         </Box>
       );
     }
-
-    const plan = plans.find(item => item.title === selectedPlan);
 
     return (
       <Box sx={{ maxWidth: 560, mx: 'auto', py: { xs: 1, sm: 2 } }}>
@@ -702,12 +643,18 @@ const JoinUs = () => {
         <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2, bgcolor: 'background.default' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mb: 1 }}>
             <Typography color="text.secondary">Membership plan</Typography>
-            <Typography fontWeight={600}>{plan?.title}</Typography>
+            <Typography fontWeight={600}>{selectedPlanDetails?.title}</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mb: 1 }}>
+            <Typography color="text.secondary">Membership category</Typography>
+            <Typography fontWeight={600}>
+              {membershipCategories.find(({ id }) => id === selectedCategory)?.label}
+            </Typography>
           </Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
             <Typography color="text.secondary">Amount due</Typography>
             <Typography fontWeight={700} color="primary.main">
-              KES {plan?.amount.toLocaleString()}
+              KES {selectedAmount.toLocaleString('en-KE')}
             </Typography>
           </Box>
         </Paper>
@@ -751,7 +698,7 @@ const JoinUs = () => {
           )}
           {submitted ? (
             <Alert severity="success" sx={{ mb: 2 }}>
-              Your payment has been verified and your membership application is complete.
+              Your membership application is complete. Thank you for joining us.
             </Alert>
           ) : (
             <>
@@ -789,16 +736,31 @@ const JoinUs = () => {
                     ? 'Processing…'
                     : activeStep !== steps.length - 1
                       ? 'Next'
-                      : selectedPlan === 'Mwananchi'
+                      : !requiresPayment
                         ? 'Submit Application'
                         : pendingPayment
                           ? 'Verify Payment'
-                          : `Pay KES ${plans.find(plan => plan.title === selectedPlan)?.amount.toLocaleString()} with Paystack`}
+                          : `Pay KES ${selectedAmount.toLocaleString('en-KE')} with Paystack`}
                 </Button>
               </Box>
             </>
           )}
         </StyledPaper>
+        <Box sx={{ textAlign: 'center', mt: 3 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            Need help choosing a plan?
+          </Typography>
+          <Button
+            component="a"
+            href="https://wa.me/254724253622"
+            target="_blank"
+            rel="noopener noreferrer"
+            variant="outlined"
+            color="success"
+          >
+            WhatsApp us on 0724253622
+          </Button>
+        </Box>
       </Container>
     </Box>
   );

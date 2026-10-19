@@ -26,16 +26,11 @@ import {
   Pagination,
   useTheme,
   useMediaQuery,
-  FormControlLabel,
-  RadioGroup,
-  Radio,
 } from '@mui/material';
 import PageHero from '../components/PageHero';
 import {
   Close as CloseIcon,
   ShoppingCart as ShoppingCartIcon,
-  LocationOn as LocationIcon,
-  Star as StarIcon,
 } from '@mui/icons-material';
 import { shopApi, pickupLocationsApi } from '../services/api';
 

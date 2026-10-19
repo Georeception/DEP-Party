@@ -1,252 +1,195 @@
-import React from 'react';
-import { Box, Container, Grid, Typography, Card, CardContent, Button } from '@mui/material';
+import React, { useState } from 'react';
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  Container,
+  Grid,
+  Tab,
+  Tabs,
+  Typography,
+} from '@mui/material';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import { useNavigate } from 'react-router-dom';
-import { styled } from '@mui/material/styles';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  getMembershipAmount,
+  isFreeRegistrationPeriod,
+  membershipCategories,
+  membershipPlans,
+} from '../data/membershipPlans';
 
-const StyledCard = styled(Card)(({ theme }) => ({
-  height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-  transition: 'all 0.3s ease-in-out',
-  border: '1px solid',
-  borderColor: theme.palette.primary.light,
-  '&:hover': {
-    transform: 'translateY(-8px)',
-    borderColor: theme.palette.primary.main,
-    '& .category-box': {
-      backgroundColor: theme.palette.primary.main,
-    },
-  },
-  [theme.breakpoints.down('sm')]: {
-    marginBottom: theme.spacing(2),
-  },
-}));
+const formatAmount = (amount) => `KES ${amount.toLocaleString('en-KE')}`;
 
 const MembershipPlans = () => {
   const navigate = useNavigate();
+  const [category, setCategory] = useState('general');
+  const [registrationIsFree, setRegistrationIsFree] = useState(isFreeRegistrationPeriod);
+  const visiblePlans = membershipPlans.filter((plan) => (
+    category === 'general' || plan.youthAmount !== null
+  ));
 
-  const plans = [
-    {
-      title: 'Mwananchi',
-      type: 'member',
-      category: 'Welcome',
-      features: [
-        'Ordinary Citizens',
-        'Driving grassroots efforts',
-        'Building the party\'s strength'
-      ],
-      label: 'Foundation of our Party'
-    },
-    {
-      title: 'Bronze',
-      type: 'member',
-      category: 'Officials',
-      features: [
-        'County-level officials',
-        'Representative of party in counties',
-        'Effective local governance'
-      ],
-      label: 'Branch Officials'
-    },
-    {
-      title: 'Silver',
-      type: 'member',
-      category: 'Aspirants',
-      features: [
-        'Officials/MCA',
-        'Top 6 branch officials',
-        'Core leadership at the sub-county level'
-      ],
-      label: 'Aspirants'
-    },
-    {
-      title: 'Gold',
-      type: 'member',
-      category: 'Aspirant',
-      features: [
-        'NEC/MP/Senate aspirants',
-        'NEC officials, and MP and Senate aspirants',
-        'Fostering high-level legislative within the party'
-      ],
-      label: 'Aspirants'
-    },
-    {
-      title: 'Platinum',
-      type: 'member',
-      category: 'Aspirant',
-      features: [
-        'Top leadership/Governor',
-        'Top leadership aspirants',
-        'Party Governance and strategic decision-making'
-      ],
-      label: 'Aspirants'
-    }
-  ];
-
-  const handlePlanSelect = (planTitle) => {
-    navigate(`/volunteer?plan=${encodeURIComponent(planTitle)}`);
-  };
-
-  const handleJoinNow = () => {
-    navigate('/volunteer');
-  };
+  React.useEffect(() => {
+    const timer = window.setInterval(() => setRegistrationIsFree(isFreeRegistrationPeriod()), 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   return (
-    <Box sx={{ py: { xs: 6, sm: 8, md: 10 }, backgroundColor: '#1E6E43' }}>
+    <Box sx={{
+      py: { xs: 7, md: 10 },
+      background: 'linear-gradient(145deg, #103d2b 0%, #1e6e43 62%, #174c35 100%)',
+      color: 'common.white',
+    }}>
       <Container maxWidth="lg">
-        <Typography
-          variant="h4"
-          sx={{
-            textAlign: 'center',
-            mb: 2,
-            color: 'secondary.main',
-            fontWeight: 'bold',
-            fontSize: { xs: '1.75rem', sm: '2rem', md: '2.5rem' },
-          }}
-        >
-          Membership Plans
-        </Typography>
-        <Typography
-          variant="body1"
-          sx={{
-            textAlign: 'center',
-            mb: { xs: 4, sm: 6, md: 8 },
-            maxWidth: '700px',
-            mx: 'auto',
-            color: 'white',
-            fontSize: { xs: '0.9rem', sm: '1rem' },
-          }}
-        >
-          Join our movement and be part of the change. Choose the membership level that best suits your
-          role in shaping our nation's future.
-        </Typography>
-        <Grid container spacing={{ xs: 2, sm: 3 }}>
-          {plans.map((plan, index) => (
-            <Grid item xs={12} sm={6} md={2.4} key={index}>
-              <StyledCard
-                component="button"
-                type="button"
-                aria-label={`Apply for ${plan.title} membership`}
-                onClick={() => handlePlanSelect(plan.title)}
-                sx={{ width: '100%', textAlign: 'left', backgroundColor: 'background.paper' }}
-              >
-                <CardContent sx={{ 
-                  p: { xs: 2, sm: 3 },
-                  display: 'flex',
-                  flexDirection: 'column',
-                  height: '100%',
-                }}>
-                  <Typography 
-                    variant="h5" 
-                    sx={{ 
-                      mb: 1, 
-                      fontWeight: 'bold', 
-                      textAlign: 'center',
-                      color: 'primary.main',
-                      fontSize: { xs: '1.25rem', sm: '1.5rem' },
-                    }}
-                  >
-                    {plan.title}
-                  </Typography>
-                  <Typography
-                    variant="subtitle2"
-                    sx={{
-                      mb: 2,
-                      color: 'text.secondary',
-                      textAlign: 'center',
-                      textTransform: 'uppercase',
-                      letterSpacing: 1,
-                      fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                    }}
-                  >
-                    {plan.type}
-                  </Typography>
-                  <Box
-                    className="category-box"
-                    sx={{
-                      backgroundColor: 'primary.light',
-                      color: 'white',
-                      py: { xs: 0.5, sm: 1 },
-                      px: { xs: 1, sm: 2 },
-                      borderRadius: 2,
-                      mb: { xs: 2, sm: 3 },
-                      textAlign: 'center',
-                      transition: 'background-color 0.3s ease-in-out',
-                      fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                    }}
-                  >
-                    {plan.category}
-                  </Box>
-                  <Box sx={{ flexGrow: 1, mb: { xs: 2, sm: 3 } }}>
-                    {plan.features.map((feature, featureIndex) => (
-                      <Box
-                        key={featureIndex}
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'flex-start',
-                          mb: { xs: 1, sm: 2 },
-                        }}
-                      >
-                        <CheckCircleOutlineIcon 
-                          sx={{ 
-                            mr: 1, 
-                            color: 'primary.main',
-                            mt: 0.3,
-                            fontSize: { xs: 16, sm: 20 },
-                          }} 
-                        />
-                        <Typography 
-                          variant="body2" 
-                          sx={{
-                            color: 'text.secondary',
-                            lineHeight: 1.4,
-                            fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                          }}
-                        >
-                          {feature}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Box>
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      display: 'block',
-                      textAlign: 'center',
-                      fontStyle: 'italic',
-                      color: 'text.secondary',
-                      mt: 'auto',
-                      mb: 2,
-                      fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                    }}
-                  >
-                    {plan.label}
-                  </Typography>
-                </CardContent>
-              </StyledCard>
-            </Grid>
-          ))}
-        </Grid>
-        <Box sx={{ 
-          textAlign: 'center', 
-          mt: { xs: 4, sm: 6 },
-        }}>
-          <Button
-            variant="contained"
-            onClick={handleJoinNow}
+        <Box sx={{ maxWidth: 760, mx: 'auto', textAlign: 'center', mb: 5 }}>
+          <Chip
+            label="YOUR PLACE IN THE MOVEMENT"
             sx={{
-              backgroundColor: '#006400',
-              color: 'white',
-              py: { xs: 1.5, sm: 2 },
-              px: { xs: 3, sm: 4 },
-              fontSize: { xs: '0.875rem', sm: '1rem' },
-              '&:hover': {
-                backgroundColor: '#004d00',
+              mb: 2,
+              color: '#f5d66b',
+              bgcolor: 'rgba(255,255,255,0.1)',
+              fontWeight: 800,
+              letterSpacing: 1,
+            }}
+          />
+          <Typography variant="h2" component="h2" sx={{ mb: 2, color: 'white' }}>
+            Membership plans
+          </Typography>
+          <Typography sx={{ color: 'rgba(255,255,255,0.82)', fontSize: { xs: '1rem', md: '1.1rem' } }}>
+            Choose the membership that reflects how you want to serve. Registration is free for every plan
+            through 30 November 2026.
+          </Typography>
+        </Box>
+
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          mb: 4,
+          borderBottom: '1px solid rgba(255,255,255,0.2)',
+        }}>
+          <Tabs
+            value={category}
+            onChange={(_, value) => setCategory(value)}
+            aria-label="Membership pricing categories"
+            textColor="inherit"
+            sx={{
+              '& .MuiTabs-indicator': { bgcolor: '#f5d66b' },
+              '& .MuiTab-root': {
+                color: 'rgba(255,255,255,0.7)',
+                px: { xs: 2, sm: 4 },
+                '&.Mui-selected': { color: 'white' },
               },
             }}
           >
-            Join Now
+            {membershipCategories.map((option) => (
+              <Tab key={option.id} value={option.id} label={option.label} />
+            ))}
+          </Tabs>
+        </Box>
+
+        <Grid container spacing={2.5}>
+          {visiblePlans.map((plan) => {
+            const amount = getMembershipAmount(plan, category);
+            return (
+              <Grid item xs={12} sm={6} lg={4} key={plan.id}>
+                <Card
+                  component={Link}
+                  to={`/volunteer?plan=${encodeURIComponent(plan.title)}&category=${category}`}
+                  aria-label={`Choose ${plan.title} membership`}
+                  sx={{
+                    width: '100%',
+                    height: '100%',
+                    minHeight: 350,
+                    display: 'block',
+                    textAlign: 'left',
+                    textDecoration: 'none',
+                    color: 'text.primary',
+                    bgcolor: 'background.paper',
+                    border: '1px solid rgba(255,255,255,0.35)',
+                    '&:focus-visible': { outline: '3px solid #f5d66b', outlineOffset: 2 },
+                    '&:hover': {
+                      transform: 'translateY(-5px)',
+                      borderColor: '#f5d66b',
+                      boxShadow: '0 18px 40px rgba(0,0,0,0.2)',
+                    },
+                  }}
+                >
+                  <CardContent sx={{
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    p: { xs: 2.5, md: 3 },
+                  }}>
+                    <Typography variant="h4" component="h3" sx={{ color: 'primary.dark', mb: 1 }}>
+                      {plan.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ minHeight: 54 }}>
+                      {plan.description}
+                    </Typography>
+                    <Box sx={{ my: 2 }}>
+                      {registrationIsFree ? (
+                        <>
+                          <Typography variant="h4" sx={{ color: 'success.main', fontWeight: 800 }}>
+                            FREE
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {amount === 0 ? 'Mwananchi membership remains free' : `KES ${amount.toLocaleString('en-KE')} from 1 December 2026`}
+                          </Typography>
+                        </>
+                      ) : (
+                        <Typography variant="h4" sx={{ color: 'primary.dark', fontWeight: 800 }}>
+                          {amount === 0 ? 'Always free' : formatAmount(amount)}
+                        </Typography>
+                      )}
+                    </Box>
+                    <Box sx={{ flexGrow: 1 }}>
+                      {plan.features.map((feature) => (
+                        <Box key={feature} sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
+                          <CheckCircleOutlineIcon sx={{ mr: 1, mt: '2px', fontSize: 19, color: 'primary.main' }} />
+                          <Typography variant="body2" color="text.secondary">{feature}</Typography>
+                        </Box>
+                      ))}
+                    </Box>
+                    <Typography
+                      component="span"
+                      variant="button"
+                      sx={{ alignSelf: 'flex-start', mt: 2, color: 'primary.dark' }}
+                    >
+                      Select this plan
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            );
+          })}
+        </Grid>
+
+        <Box sx={{
+          mt: 4,
+          p: { xs: 2, sm: 2.5 },
+          border: '1px solid rgba(255,255,255,0.25)',
+          borderRadius: 2,
+          textAlign: 'center',
+          bgcolor: 'rgba(255,255,255,0.08)',
+        }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.9)' }}>
+            {registrationIsFree
+              ? 'No payment is needed before the deadline. From 1 December 2026, Paystack checkout will be used for plans with a fee.'
+              : 'Secure Paystack checkout is available for plans with a fee.'}
+          </Typography>
+          <Button
+            variant="contained"
+            onClick={() => navigate(`/volunteer?category=${category}`)}
+            sx={{
+              mt: 2,
+              px: 3,
+              bgcolor: '#f5d66b',
+              color: '#173b2b',
+              '&:hover': { bgcolor: '#ffe58a' },
+            }}
+          >
+            Join the party
           </Button>
         </Box>
       </Container>
@@ -254,4 +197,4 @@ const MembershipPlans = () => {
   );
 };
 
-export default MembershipPlans; 
+export default MembershipPlans;
