@@ -24,12 +24,14 @@ const NoticeAd = () => {
       open={open}
       onClose={() => setOpen(false)}
       aria-label="DEP-BUS announcement"
-      maxWidth="md"
+      maxWidth={false}
       fullWidth
       PaperProps={{
         sx: {
           position: 'relative',
           overflow: 'hidden',
+          width: { xs: 'calc(100% - 32px)', sm: 'min(460px, calc(100% - 64px))' },
+          maxHeight: '90vh',
           borderRadius: { xs: 2, sm: 3 },
           bgcolor: 'background.paper',
         },
@@ -50,13 +52,15 @@ const NoticeAd = () => {
       >
         <CloseIcon />
       </IconButton>
-      <DialogContent sx={{ p: { xs: 1, sm: 1.5 }, pb: 0 }}>
+      <DialogContent sx={{ p: { xs: 1, sm: 1.5 }, pb: 0, textAlign: 'center' }}>
         <ButtonBase
           onClick={openJoinPage}
           aria-label="Open the membership join page"
           sx={{
             display: 'block',
-            width: '100%',
+            width: 'fit-content',
+            maxWidth: '100%',
+            mx: 'auto',
             borderRadius: 1.5,
             overflow: 'hidden',
             '&:focus-visible': {
@@ -71,7 +75,8 @@ const NoticeAd = () => {
             alt="DEP-BUS membership announcement"
             style={{
               display: 'block',
-              width: '100%',
+              width: 'auto',
+              maxWidth: '100%',
               maxHeight: '72vh',
               objectFit: 'contain',
             }}
