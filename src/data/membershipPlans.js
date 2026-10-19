@@ -9,6 +9,7 @@ export const membershipPlans = [
   {
     id: 'mwananchi',
     title: 'Mwananchi',
+    position: null,
     description: 'A member of the community and the foundation of our movement.',
     generalAmount: 0,
     youthAmount: null,
@@ -17,6 +18,7 @@ export const membershipPlans = [
   {
     id: 'mca',
     title: 'MCA',
+    position: 'Member of the County Assembly',
     description: 'For aspiring and serving Members of County Assembly.',
     generalAmount: 5000,
     youthAmount: 2500,
@@ -25,6 +27,7 @@ export const membershipPlans = [
   {
     id: 'mp',
     title: 'MP',
+    position: 'Member of the National Assembly',
     description: 'For aspiring and serving Members of Parliament.',
     generalAmount: 10000,
     youthAmount: 5000,
@@ -33,6 +36,7 @@ export const membershipPlans = [
   {
     id: 'women_rep',
     title: 'Women Rep',
+    position: 'County Woman Representative',
     description: 'For aspiring and serving Women Representatives.',
     generalAmount: 10000,
     youthAmount: 5000,
@@ -41,6 +45,7 @@ export const membershipPlans = [
   {
     id: 'senator',
     title: 'Senator',
+    position: 'Senator',
     description: 'For aspiring and serving Senators.',
     generalAmount: 10000,
     youthAmount: 5000,
@@ -49,6 +54,7 @@ export const membershipPlans = [
   {
     id: 'governor',
     title: 'Governor',
+    position: 'Governor',
     description: 'For aspiring and serving Governors.',
     generalAmount: 50000,
     youthAmount: 25000,

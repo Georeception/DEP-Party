@@ -66,8 +66,11 @@ const Shop = () => {
   // Load product details when selected
   useEffect(() => {
     if (selectedProduct) {
+      setReviews([]);
       loadSimilarProducts(selectedProduct.id);
       loadProductReviews(selectedProduct.id);
+    } else {
+      setReviews([]);
     }
   }, [selectedProduct]);
 
@@ -207,7 +210,7 @@ const Shop = () => {
       };
 
       const order = await shopApi.createOrder(orderData);
-      const payment = await shopApi.initiatePayment(order.id, 'mpesa_stk');
+      await shopApi.initiatePayment(order.id, 'mpesa_stk');
 
       setCart([]);
       setShowCheckout(false);
@@ -493,8 +496,8 @@ const Shop = () => {
                       <Typography variant="h6" gutterBottom>
                         Reviews
                       </Typography>
-                      {selectedProduct.reviews && selectedProduct.reviews.length > 0 ? (
-                        selectedProduct.reviews.map((review, index) => (
+                      {reviews.length > 0 ? (
+                        reviews.map((review, index) => (
                           <Box key={index} sx={{ mb: 2 }}>
                             <Rating value={review.rating} readOnly size="small" />
                             <Typography variant="body2" sx={{ mt: 1 }}>

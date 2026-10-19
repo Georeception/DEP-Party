@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import NoticeAd from './components/NoticeAd';
 import Home from './pages/Home';
 import WhoWeAre from './components/about/WhoWeAre';
 import NationalLeadership from './components/about/NationalLeadership';
@@ -37,6 +38,7 @@ const AppContent = () => {
     return (
         <Router>
             <ScrollToTop />
+            <NoticeAd />
             {!isAuthenticated && <Header />}
             <Routes>
                 <Route path="/" element={<Home />} />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Box,
@@ -15,6 +15,7 @@ import {
   Alert,
   Card,
   CardContent,
+  LinearProgress,
   Stepper,
   Step,
   StepLabel,
@@ -22,6 +23,11 @@ import {
   Chip,
   Tabs,
   Tab,
+  Checkbox,
+  FormControlLabel,
+  FormGroup,
+  Radio,
+  RadioGroup,
 } from '@mui/material';
 import PageHero from '../components/PageHero';
 import { styled } from '@mui/material/styles';
@@ -72,8 +78,24 @@ const MembershipCard = styled(Card, {
   },
 }));
 
+const aspirantSectionTitles = [
+  'Section A · Personal details',
+  'Section B · DEP-BUS membership',
+  'Section C · Position applied for',
+  'Section D · Electoral area',
+  'Section E · Special category',
+  'Section F · Education, profession & experience',
+  'Section G · Leadership & community engagement',
+  'Section H · Motivation for seeking the DEP-BUS ticket',
+  'Section I · Political & electoral information',
+  'Section J · Campaign & organisational capacity',
+  'Section K · Commitment to DEP-BUS',
+];
+
 const JoinUs = () => {
   const [searchParams] = useSearchParams();
+  const stepperContainerRef = useRef(null);
+  const activeStepRef = useRef(null);
   const requestedPlan = searchParams.get('plan');
   const requestedCategory = searchParams.get('category');
   const requestedCategoryIsValid = membershipCategories.some(({ id }) => id === requestedCategory);
@@ -92,27 +114,94 @@ const JoinUs = () => {
   const [locations, setLocations] = useState({
     counties: [],
     constituencies: [],
-    wards: []
+    wards: [],
+    electoralConstituencies: [],
+    electoralWards: [],
   });
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
+    fullName: '',
+    nationalIdNumber: '',
+    dateOfBirth: '',
     email: '',
     phone: '',
+    whatsappNumber: '',
     age: '',
     gender: '',
     occupation: '',
     interests: '',
     county: '',
+    subCounty: '',
+    postalPhysicalAddress: '',
     constituency: '',
-    ward: ''
+    ward: '',
+    electoralCounty: '',
+    electoralConstituency: '',
+    electoralWard: '',
+    membershipStatus: '',
+    membershipStatusConfirmed: '',
+    membershipReference: '',
+  });
+  const [aspirantDetails, setAspirantDetails] = useState({
+    specialCategories: [],
+    disabilityDetails: '',
+    educationLevel: '',
+    educationOther: '',
+    professionalQualifications: '',
+    currentOccupation: '',
+    currentEmployer: '',
+    professionalExperience: '',
+    heldPublicLeadership: '',
+    previousLeadershipPosition: '',
+    previousLeadershipInstitution: '',
+    previousLeadershipPeriod: '',
+    organisations: '',
+    communityContribution: '',
+    motivation: '',
+    priorityIssueOne: '',
+    priorityIssueTwo: '',
+    priorityIssueThree: '',
+    devolutionVision: '',
+    partyContribution: '',
+    contestedBefore: '',
+    contestedPosition: '',
+    contestedYear: '',
+    contestedParty: '',
+    contestedOutcome: '',
+    currentlyHoldsOffice: '',
+    currentOfficeDetails: '',
+    bankruptcyHistory: '',
+    bankruptcyDetails: '',
+    criminalProceedings: '',
+    criminalProceedingsDetails: '',
+    supportNetwork: '',
+    volunteerCount: '',
+    campaignStructure: '',
+    grassrootsStrategy: '',
+    upholdPartyValues: '',
+    peacefulPolitics: '',
+    supportIssueBasedPolitics: '',
+    abideByNominationProcess: '',
   });
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
 
   const selectedPlanDetails = membershipPlans.find((plan) => plan.id === selectedPlan);
+  const isAspirantPlan = Boolean(selectedPlanDetails && selectedPlan !== 'mwananchi');
   const selectedAmount = getMembershipAmount(selectedPlanDetails, selectedCategory);
   const requiresPayment = selectedAmount > 0 && !registrationIsFree;
+  const steps = isAspirantPlan
+    ? ['Select membership', ...aspirantSectionTitles, 'Payment']
+    : ['Select membership', 'Personal information', 'Payment'];
+  const aspirantSectionIndex = Math.min(
+    Math.max(activeStep - 1, 0),
+    aspirantSectionTitles.length - 1
+  );
+  const isAspirantPaymentStep = isAspirantPlan && activeStep === steps.length - 1;
+  const sectionProgress = isAspirantPaymentStep
+    ? 100
+    : (Math.min(Math.max(activeStep, 0), aspirantSectionTitles.length) / aspirantSectionTitles.length) * 100;
 
   useEffect(() => {
     const refreshRegistrationPeriod = () => setRegistrationIsFree(isFreeRegistrationPeriod());
@@ -120,7 +209,16 @@ const JoinUs = () => {
     return () => window.clearInterval(timer);
   }, []);
 
-  const steps = ['Select Membership Plan', 'Personal Information', 'Payment'];
+  useEffect(() => {
+    if (!isAspirantPlan || !stepperContainerRef.current || !activeStepRef.current) return;
+    const container = stepperContainerRef.current;
+    const activeStepElement = activeStepRef.current;
+    const stepCenter = activeStepElement.getBoundingClientRect().left
+      - container.getBoundingClientRect().left
+      + container.scrollLeft
+      + activeStepElement.clientWidth / 2;
+    container.scrollLeft = stepCenter - container.clientWidth / 2;
+  }, [activeStep, isAspirantPlan]);
 
   // Fetch counties on component mount
   useEffect(() => {
@@ -128,7 +226,6 @@ const JoinUs = () => {
       try {
         const data = await locationApi.getCounties();
         const countiesList = Array.isArray(data) ? data : data.results || [];
-        //console.log('Counties loaded:', countiesList); // Debug log
         setLocations(prev => ({ 
           ...prev, 
           counties: countiesList
@@ -141,59 +238,80 @@ const JoinUs = () => {
     fetchCounties();
   }, []);
 
-  // Fetch constituencies when county changes
   const handleCountyChange = async (e) => {
     const { name, value } = e.target;
-    //console.log('County selected:', value); // Debug log
-    setFormData(prev => ({ ...prev, [name]: value, constituency: '', ward: '' }));
+    const electoral = name === 'electoralCounty';
+    const constituencyName = electoral ? 'electoralConstituency' : 'constituency';
+    const wardName = electoral ? 'electoralWard' : 'ward';
+    const constituenciesKey = electoral ? 'electoralConstituencies' : 'constituencies';
+    const wardsKey = electoral ? 'electoralWards' : 'wards';
+    setFormData(prev => ({ ...prev, [name]: value, [constituencyName]: '', [wardName]: '' }));
     
     try {
       const data = await locationApi.getConstituencies(value);
       const constituenciesList = Array.isArray(data) ? data : data.results || [];
-      //console.log('Constituencies loaded:', constituenciesList); // Debug log
       setLocations(prev => ({ 
         ...prev, 
-        constituencies: constituenciesList,
-        wards: [] 
+        [constituenciesKey]: constituenciesList,
+        [wardsKey]: [],
       }));
     } catch (error) {
       console.error('Error fetching constituencies:', error);
-      setLocations(prev => ({ ...prev, constituencies: [], wards: [] }));
+      setLocations(prev => ({ ...prev, [constituenciesKey]: [], [wardsKey]: [] }));
     }
   };
 
-  // Fetch wards when constituency changes
   const handleConstituencyChange = async (e) => {
     const { name, value } = e.target;
-    //console.log('Constituency selected:', value); // Debug log
-    setFormData(prev => ({ ...prev, [name]: value, ward: '' }));
+    const electoral = name === 'electoralConstituency';
+    const wardName = electoral ? 'electoralWard' : 'ward';
+    const wardsKey = electoral ? 'electoralWards' : 'wards';
+    setFormData(prev => ({ ...prev, [name]: value, [wardName]: '' }));
     
     if (!value) {
-      setLocations(prev => ({ ...prev, wards: [] }));
+      setLocations(prev => ({ ...prev, [wardsKey]: [] }));
       return;
     }
     
     try {
       const data = await locationApi.getWards(value);
       const wardsList = Array.isArray(data) ? data : data.results || [];
-      //console.log('Wards loaded:', wardsList); // Debug log
       setLocations(prev => ({ 
-        ...prev, 
-        wards: wardsList
+        ...prev,
+        [wardsKey]: wardsList,
       }));
     } catch (error) {
       console.error('Error fetching wards:', error);
-      setLocations(prev => ({ ...prev, wards: [] }));
+      setLocations(prev => ({ ...prev, [wardsKey]: [] }));
     }
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    //console.log(`Form field ${name} changed to:`, value); // Debug log
     setFormData(prev => ({
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handleAspirantChange = (e) => {
+    const { name, value } = e.target;
+    setAspirantDetails(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSpecialCategoryChange = (category) => {
+    setAspirantDetails(prev => {
+      if (category === 'none') {
+        return { ...prev, specialCategories: prev.specialCategories.includes('none') ? [] : ['none'] };
+      }
+      const selected = prev.specialCategories.filter(item => item !== 'none');
+      return {
+        ...prev,
+        specialCategories: selected.includes(category)
+          ? selected.filter(item => item !== category)
+          : [...selected, category],
+      };
+    });
   };
 
   const handlePlanSelect = (planId) => {
@@ -203,10 +321,12 @@ const JoinUs = () => {
 
   const handleNext = () => {
     if (activeStep === 1) {
-      const requiredFields = ['firstName', 'lastName', 'phone', 'age', 'occupation', 'county', 'constituency', 'ward', 'gender'];
+      const requiredFields = isAspirantPlan
+        ? ['fullName', 'nationalIdNumber', 'dateOfBirth', 'phone', 'whatsappNumber', 'subCounty', 'county', 'constituency', 'ward', 'gender']
+        : ['firstName', 'lastName', 'phone', 'age', 'occupation', 'county', 'constituency', 'ward', 'gender'];
       if (requiresPayment) requiredFields.push('email');
       const missingFields = requiredFields.filter(field => !formData[field]);
-      
+
       if (missingFields.length > 0) {
         setError('Please fill in all required fields marked with *');
         return;
@@ -216,9 +336,27 @@ const JoinUs = () => {
         return;
       }
     }
+
+    if (isAspirantPlan && activeStep === 2) {
+      const requiredFields = ['membershipStatus', 'membershipStatusConfirmed', 'membershipReference'];
+      const missingFields = requiredFields.filter(field => !formData[field]?.trim());
+      if (missingFields.length > 0) {
+        setError('Please fill in all required fields marked with *');
+        return;
+      }
+    }
+
+    if (isAspirantPlan && activeStep === 4) {
+      const requiredFields = ['electoralCounty', 'electoralConstituency', 'electoralWard'];
+      const missingFields = requiredFields.filter(field => !formData[field]);
+      if (missingFields.length > 0) {
+        setError('Please complete the electoral area fields before continuing.');
+        return;
+      }
+    }
     
     setActiveStep((prevStep) => prevStep + 1);
-    setError(''); // Clear any previous errors
+    setError('');
   };
 
   const handleBack = () => {
@@ -232,7 +370,9 @@ const JoinUs = () => {
     const freeRegistration = isFreeRegistrationPeriod();
     setRegistrationIsFree(freeRegistration);
     const paymentRequired = selectedAmount > 0 && !freeRegistration;
-    const requiredFields = ['firstName', 'lastName', 'phone', 'age', 'occupation', 'county', 'constituency', 'ward', 'gender'];
+    const requiredFields = isAspirantPlan
+      ? ['fullName', 'nationalIdNumber', 'dateOfBirth', 'phone', 'whatsappNumber', 'subCounty', 'county', 'constituency', 'ward', 'gender', 'membershipStatus', 'membershipStatusConfirmed', 'membershipReference', 'electoralCounty', 'electoralConstituency', 'electoralWard']
+      : ['firstName', 'lastName', 'phone', 'age', 'occupation', 'county', 'constituency', 'ward', 'gender'];
     if (paymentRequired) requiredFields.push('email');
     const missingFields = requiredFields.filter(field => !formData[field]);
     if (missingFields.length > 0) {
@@ -245,17 +385,34 @@ const JoinUs = () => {
       return;
     }
 
+    const fullName = isAspirantPlan ? formData.fullName.trim() : `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim();
+    const nameParts = fullName.split(/\s+/);
     const membershipData = {
-      first_name: formData.firstName.trim(),
-      last_name: formData.lastName.trim(),
+      first_name: isAspirantPlan ? nameParts[0] : formData.firstName.trim(),
+      last_name: isAspirantPlan ? nameParts.slice(1).join(' ') : formData.lastName.trim(),
+      full_name: isAspirantPlan ? fullName : '',
+      national_id_number: isAspirantPlan ? formData.nationalIdNumber.trim() : '',
+      date_of_birth: isAspirantPlan ? formData.dateOfBirth : null,
       email: formData.email.trim(),
       phone: formData.phone.trim(),
-      age: formData.age,
+      whatsapp_number: isAspirantPlan ? formData.whatsappNumber.trim() : '',
+      sub_county: isAspirantPlan ? formData.subCounty.trim() : '',
+      postal_address: isAspirantPlan ? formData.postalPhysicalAddress.trim() : '',
+      age: isAspirantPlan ? null : formData.age,
       gender: formData.gender,
-      occupation: formData.occupation.trim(),
+      occupation: isAspirantPlan
+        ? aspirantDetails.currentOccupation.trim()
+        : formData.occupation.trim(),
       county: formData.county,
       constituency: formData.constituency,
       ward: formData.ward,
+      electoral_county: isAspirantPlan ? formData.electoralCounty : null,
+      electoral_constituency: isAspirantPlan ? formData.electoralConstituency : null,
+      electoral_ward: isAspirantPlan ? formData.electoralWard : null,
+      dep_bus_membership_status: isAspirantPlan ? formData.membershipStatus : '',
+      membership_status_confirmed: isAspirantPlan ? formData.membershipStatusConfirmed === 'yes' : null,
+      membership_reference: isAspirantPlan ? formData.membershipReference.trim() : '',
+      aspirant_details: isAspirantPlan ? aspirantDetails : {},
       membership_type: selectedPlan,
       membership_category: selectedCategory,
     };
@@ -286,7 +443,7 @@ const JoinUs = () => {
       await membershipApi.verifyPaystackPayment(reference, membershipData);
       setPendingPayment(null);
       setSubmitted(true);
-      setActiveStep(3);
+      setActiveStep(steps.length - 1);
       setIsSubmitting(false);
     };
 
@@ -299,7 +456,7 @@ const JoinUs = () => {
         );
         setPendingPayment(null);
         setSubmitted(true);
-        setActiveStep(3);
+        setActiveStep(steps.length - 1);
         setIsSubmitting(false);
       } else {
         const PaystackPop = await loadPaystack();
@@ -333,6 +490,13 @@ const JoinUs = () => {
   };
 
   const renderStepContent = (step) => {
+    if (isAspirantPlan && step >= 3 && step < steps.length - 1) {
+      return renderAspirantApplicationStep();
+    }
+    if (step === steps.length - 1) {
+      return renderPaymentStep();
+    }
+
     switch (step) {
       case 0:
         return (
@@ -442,7 +606,7 @@ const JoinUs = () => {
       case 1:
         return renderPersonalInfoStep();
       case 2:
-        return renderPaymentStep();
+        return isAspirantPlan ? renderMembershipDetailsStep() : null;
       default:
         return null;
     }
@@ -450,30 +614,77 @@ const JoinUs = () => {
 
   const renderPersonalInfoStep = () => (
     <Grid container spacing={3}>
-      <Grid item xs={12} sm={6}>
-        <TextField
-          required
-          fullWidth
-          label="First Name"
-          name="firstName"
-          value={formData.firstName}
-          onChange={handleChange}
-          error={!formData.firstName && error}
-          helperText={!formData.firstName && error ? 'First name is required' : ''}
-        />
-      </Grid>
-      <Grid item xs={12} sm={6}>
-        <TextField
-          required
-          fullWidth
-          label="Last Name"
-          name="lastName"
-          value={formData.lastName}
-          onChange={handleChange}
-          error={!formData.lastName && error}
-          helperText={!formData.lastName && error ? 'Last name is required' : ''}
-        />
-      </Grid>
+      {isAspirantPlan ? (
+        <>
+          <Grid item xs={12}>
+            <Typography variant="h6" component="h2" sx={{ color: 'primary.dark', fontWeight: 800 }}>
+              Section A · Personal details
+            </Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              required
+              fullWidth
+              label="Full name as appearing on National ID"
+              name="fullName"
+              value={formData.fullName}
+              onChange={handleChange}
+              error={Boolean(error) && !formData.fullName}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              required
+              fullWidth
+              label="National ID / Passport number"
+              name="nationalIdNumber"
+              value={formData.nationalIdNumber}
+              onChange={handleChange}
+              error={Boolean(error) && !formData.nationalIdNumber}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              required
+              fullWidth
+              label="Date of birth"
+              name="dateOfBirth"
+              type="date"
+              value={formData.dateOfBirth}
+              onChange={handleChange}
+              InputLabelProps={{ shrink: true }}
+              error={Boolean(error) && !formData.dateOfBirth}
+            />
+          </Grid>
+        </>
+      ) : (
+        <>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              required
+              fullWidth
+              label="First Name"
+              name="firstName"
+              value={formData.firstName}
+              onChange={handleChange}
+              error={!formData.firstName && error}
+              helperText={!formData.firstName && error ? 'First name is required' : ''}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              required
+              fullWidth
+              label="Last Name"
+              name="lastName"
+              value={formData.lastName}
+              onChange={handleChange}
+              error={!formData.lastName && error}
+              helperText={!formData.lastName && error ? 'Last name is required' : ''}
+            />
+          </Grid>
+        </>
+      )}
       <Grid item xs={12} sm={6}>
         <TextField
           fullWidth
@@ -497,7 +708,7 @@ const JoinUs = () => {
         <TextField
           required
           fullWidth
-          label="Phone Number"
+          label={isAspirantPlan ? 'Telephone number' : 'Phone Number'}
           name="phone"
           value={formData.phone}
           onChange={handleChange}
@@ -505,6 +716,20 @@ const JoinUs = () => {
           helperText={!formData.phone && error ? 'Phone number is required' : ''}
         />
       </Grid>
+      {isAspirantPlan && (
+        <Grid item xs={12} sm={6}>
+          <TextField
+            required
+            fullWidth
+            label="WhatsApp number"
+            name="whatsappNumber"
+            value={formData.whatsappNumber}
+            onChange={handleChange}
+            error={Boolean(error) && !formData.whatsappNumber}
+          />
+        </Grid>
+      )}
+      {!isAspirantPlan && (
       <Grid item xs={12} sm={6}>
         <TextField
           required
@@ -518,10 +743,12 @@ const JoinUs = () => {
           helperText={!formData.age && error ? 'Age is required' : ''}
         />
       </Grid>
+      )}
       <Grid item xs={12} sm={6}>
         <FormControl fullWidth required error={!formData.gender && error}>
-          <InputLabel>Gender</InputLabel>
+          <InputLabel id="gender-label">Gender</InputLabel>
           <Select
+            labelId="gender-label"
             name="gender"
             value={formData.gender}
             onChange={handleChange}
@@ -536,6 +763,7 @@ const JoinUs = () => {
           )}
         </FormControl>
       </Grid>
+      {!isAspirantPlan && (
       <Grid item xs={12} sm={6}>
         <TextField
           required
@@ -548,10 +776,12 @@ const JoinUs = () => {
           helperText={!formData.occupation && error ? 'Occupation is required' : ''}
         />
       </Grid>
+      )}
       <Grid item xs={12}>
         <FormControl fullWidth required error={!formData.county && error}>
-          <InputLabel>County</InputLabel>
+          <InputLabel id="county-label">County</InputLabel>
           <Select
+            labelId="county-label"
             name="county"
             value={formData.county}
             onChange={handleCountyChange}
@@ -569,10 +799,36 @@ const JoinUs = () => {
           )}
         </FormControl>
       </Grid>
+      {isAspirantPlan && (
+        <Grid item xs={12}>
+          <TextField
+            fullWidth
+            label="Postal / physical address"
+            name="postalPhysicalAddress"
+            value={formData.postalPhysicalAddress}
+            onChange={handleChange}
+          />
+        </Grid>
+      )}
+      {isAspirantPlan && (
+        <Grid item xs={12} sm={6}>
+          <TextField
+            required
+            fullWidth
+            label="Sub-County"
+            name="subCounty"
+            value={formData.subCounty}
+            onChange={handleChange}
+            helperText="Enter your Sub-County"
+            error={Boolean(error) && !formData.subCounty}
+          />
+        </Grid>
+      )}
       <Grid item xs={12} sm={6}>
         <FormControl fullWidth required error={!formData.constituency && error} disabled={!formData.county}>
-          <InputLabel>Constituency</InputLabel>
+          <InputLabel id="constituency-label">Constituency</InputLabel>
           <Select
+            labelId="constituency-label"
             name="constituency"
             value={formData.constituency}
             onChange={handleConstituencyChange}
@@ -592,8 +848,9 @@ const JoinUs = () => {
       </Grid>
       <Grid item xs={12} sm={6}>
         <FormControl fullWidth required error={!formData.ward && error} disabled={!formData.constituency}>
-          <InputLabel>Ward</InputLabel>
+          <InputLabel id="ward-label">Ward</InputLabel>
           <Select
+            labelId="ward-label"
             name="ward"
             value={formData.ward}
             onChange={handleChange}
@@ -618,6 +875,343 @@ const JoinUs = () => {
       </Grid>
     </Grid>
   );
+
+  const renderMembershipDetailsStep = () => (
+    <Grid container spacing={3}>
+      <Grid item xs={12}>
+        <Typography variant="h6" component="h2" sx={{ color: 'primary.dark', fontWeight: 800 }}>
+          Section B · DEP-BUS membership
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+          Confirm your membership status and provide your membership number before continuing.
+        </Typography>
+      </Grid>
+      <Grid item xs={12} md={6}>
+        <FormControl component="fieldset" required error={Boolean(error) && !formData.membershipStatus}>
+          <Typography variant="body2" sx={{ fontWeight: 700 }}>
+            Are you currently a member of DEP-BUS?
+          </Typography>
+          <RadioGroup
+            row
+            name="membershipStatus"
+            value={formData.membershipStatus}
+            onChange={handleChange}
+          >
+            <FormControlLabel value="yes" control={<Radio />} label="Yes" />
+            <FormControlLabel value="no" control={<Radio />} label="No" />
+            <FormControlLabel value="not_sure" control={<Radio />} label="Not sure" />
+          </RadioGroup>
+        </FormControl>
+      </Grid>
+      <Grid item xs={12} md={6}>
+        <FormControl component="fieldset" required error={Boolean(error) && !formData.membershipStatusConfirmed}>
+          <Typography variant="body2" sx={{ fontWeight: 700 }}>
+            Have you confirmed your membership status using USSD code *509#?
+          </Typography>
+          <RadioGroup
+            row
+            name="membershipStatusConfirmed"
+            value={formData.membershipStatusConfirmed}
+            onChange={handleChange}
+          >
+            <FormControlLabel value="yes" control={<Radio />} label="Yes" />
+            <FormControlLabel value="no" control={<Radio />} label="No" />
+          </RadioGroup>
+        </FormControl>
+      </Grid>
+      {(formData.membershipStatus === 'no'
+        || formData.membershipStatus === 'not_sure'
+        || formData.membershipStatusConfirmed === 'no') && (
+        <Grid item xs={12}>
+          <Alert severity="info">
+            All Aspirants are advised to reconfirm their DEP-BUS membership status through USSD Code *509# (dial *509# and follow the prompts), then enter their membership number/reference below.
+          </Alert>
+        </Grid>
+      )}
+      <Grid item xs={12} sm={8}>
+        <TextField
+          required
+          fullWidth
+          label="DEP-BUS membership number / reference"
+          name="membershipReference"
+          value={formData.membershipReference}
+          onChange={handleChange}
+          error={Boolean(error) && !formData.membershipReference.trim()}
+          helperText={
+            Boolean(error) && !formData.membershipReference.trim()
+              ? 'A membership number/reference is required before continuing.'
+              : 'Required before you can continue to the aspirant application.'
+          }
+        />
+      </Grid>
+      <Grid item xs={12}>
+        <Typography variant="caption" color="error">
+          * Fields marked with an asterisk are required
+        </Typography>
+      </Grid>
+    </Grid>
+  );
+
+  const aspirantTextField = (name, label, options = {}) => (
+    <Grid item xs={12} sm={options.half ? 6 : 12}>
+      <TextField
+        fullWidth
+        name={name}
+        label={label}
+        value={aspirantDetails[name]}
+        onChange={handleAspirantChange}
+        multiline={Boolean(options.multiline)}
+        minRows={options.multiline ? (options.rows || 3) : undefined}
+        type={options.type || 'text'}
+        inputProps={options.type === 'number' ? { min: 0 } : undefined}
+      />
+    </Grid>
+  );
+
+  const aspirantYesNoField = (name, label, choices = ['Yes', 'No']) => (
+    <Grid item xs={12}>
+      <FormControl component="fieldset">
+        <Typography variant="body2" sx={{ fontWeight: 700 }}>{label}</Typography>
+        <RadioGroup
+          row
+          name={name}
+          value={aspirantDetails[name]}
+          onChange={handleAspirantChange}
+        >
+          {choices.map((choice) => {
+            const value = choice === 'In Development' ? 'in_development' : choice.toLowerCase();
+            return <FormControlLabel key={value} value={value} control={<Radio />} label={choice} />;
+          })}
+        </RadioGroup>
+      </FormControl>
+    </Grid>
+  );
+
+  const sectionPage = (step, title, children) => (
+    activeStep === step ? (
+      <Paper key={title} variant="outlined" sx={{ p: { xs: 2, sm: 3 }, borderRadius: 2 }}>
+        <Typography variant="h6" component="h2" sx={{ mb: 2.5, color: 'primary.dark', fontWeight: 800 }}>
+          {title}
+        </Typography>
+        <Grid container spacing={2.5}>{children}</Grid>
+      </Paper>
+    ) : null
+  );
+
+  const renderAspirantApplicationStep = () => {
+    const electionAreaSelect = (field, label, options, disabled, onChange) => (
+      <Grid item xs={12} md={4}>
+        <FormControl fullWidth required error={Boolean(error) && !formData[field]}>
+          <InputLabel id={`${field}-label`}>{label}</InputLabel>
+          <Select
+            labelId={`${field}-label`}
+            name={field}
+            value={formData[field]}
+            onChange={onChange}
+            label={label}
+            disabled={disabled}
+          >
+            <MenuItem value="">Select {label}</MenuItem>
+            {options.map((item) => (
+              <MenuItem key={item.id} value={item.id}>{item.name}</MenuItem>
+            ))}
+          </Select>
+          {Boolean(error) && !formData[field] && <FormHelperText>This field is required</FormHelperText>}
+        </FormControl>
+      </Grid>
+    );
+
+    return (
+      <Box>
+        {activeStep === 3 && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            This position is pre-filled from your selected membership plan.
+          </Alert>
+        )}
+        {sectionPage(3, 'Section C · Position applied for', (
+          <>
+            <Grid item xs={12}>
+              <Typography variant="body2">
+                Position to contest on a DEP-BUS ticket in the 10 August 2027 General Election
+              </Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Position applied for"
+                value={selectedPlanDetails?.position}
+                InputProps={{ readOnly: true }}
+              />
+            </Grid>
+          </>
+        ))}
+
+        {sectionPage(4, 'Section D · Electoral area', (
+          <>
+            {electionAreaSelect(
+              'electoralCounty',
+              'Electoral county',
+              locations.counties,
+              false,
+              handleCountyChange
+            )}
+            {electionAreaSelect(
+              'electoralConstituency',
+              'Electoral constituency',
+              locations.electoralConstituencies,
+              !formData.electoralCounty,
+              handleConstituencyChange
+            )}
+            {electionAreaSelect(
+              'electoralWard',
+              'Electoral ward',
+              locations.electoralWards,
+              !formData.electoralConstituency,
+              handleChange
+            )}
+          </>
+        ))}
+
+        {sectionPage(5, 'Section E · Special category', (
+          <>
+            <Grid item xs={12}>
+              <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                Do you belong to any of the following categories?
+              </Typography>
+              <FormGroup row>
+                {[
+                  ['woman', 'Woman'],
+                  ['youth', 'Youth'],
+                  ['pwd', 'Person with Disability (PWD)'],
+                  ['none', 'None of the above'],
+                ].map(([value, label]) => (
+                  <FormControlLabel
+                    key={value}
+                    control={(
+                      <Checkbox
+                        checked={aspirantDetails.specialCategories.includes(value)}
+                        onChange={() => handleSpecialCategoryChange(value)}
+                      />
+                    )}
+                    label={label}
+                  />
+                ))}
+              </FormGroup>
+            </Grid>
+            {aspirantDetails.specialCategories.includes('pwd')
+              && aspirantTextField('disabilityDetails', 'Nature of disability (optional)', { multiline: true })}
+          </>
+        ))}
+
+        {sectionPage(6, 'Section F · Education, profession & experience', (
+          <>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>Highest level of education</InputLabel>
+                <Select
+                  name="educationLevel"
+                  value={aspirantDetails.educationLevel}
+                  onChange={handleAspirantChange}
+                  label="Highest level of education"
+                >
+                  {['Primary', 'Secondary', 'Certificate', 'Diploma', 'Degree', 'Postgraduate', 'Other'].map((level) => (
+                    <MenuItem key={level} value={level.toLowerCase()}>{level}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            {aspirantDetails.educationLevel === 'other'
+              && aspirantTextField('educationOther', 'Other education level', { half: true })}
+            {aspirantTextField('professionalQualifications', 'Professional qualification(s)', { half: true })}
+            {aspirantTextField('currentOccupation', 'Current occupation / profession / business', { half: true })}
+            {aspirantTextField('currentEmployer', 'Current employer / organisation / business (if applicable)', { half: true })}
+            {aspirantTextField('professionalExperience', 'Professional, leadership, community or public-service experience', { multiline: true })}
+          </>
+        ))}
+
+        {sectionPage(7, 'Section G · Leadership & community engagement', (
+          <>
+            {aspirantYesNoField('heldPublicLeadership', 'Have you previously held an elected or appointed public leadership position?')}
+            {aspirantDetails.heldPublicLeadership === 'yes' && (
+              <>
+                {aspirantTextField('previousLeadershipPosition', 'Position held', { half: true })}
+                {aspirantTextField('previousLeadershipInstitution', 'Institution / area', { half: true })}
+                {aspirantTextField('previousLeadershipPeriod', 'Period', { half: true })}
+              </>
+            )}
+            {aspirantTextField('organisations', 'Leadership, community, professional, youth, women, religious or civic organisations you have participated in', { multiline: true })}
+            {aspirantTextField('communityContribution', 'Your contribution to the development of your community', { multiline: true })}
+          </>
+        ))}
+
+        {sectionPage(8, 'Section H · Motivation for seeking the DEP-BUS ticket', (
+          <>
+            {aspirantTextField('motivation', 'Why do you wish to contest the 2027 General Election on a DEP-BUS ticket?', { multiline: true })}
+            {aspirantTextField('priorityIssueOne', 'Most important issue 1', { multiline: true })}
+            {aspirantTextField('priorityIssueTwo', 'Most important issue 2', { multiline: true })}
+            {aspirantTextField('priorityIssueThree', 'Most important issue 3', { multiline: true })}
+            {aspirantTextField('devolutionVision', 'What does devolution mean to you and how would you strengthen it?', { multiline: true })}
+            {aspirantTextField('partyContribution', 'What would you bring to DEP-BUS and the people of your electoral area?', { multiline: true })}
+          </>
+        ))}
+
+        {sectionPage(9, 'Section I · Political & electoral information', (
+          <>
+            {aspirantYesNoField('contestedBefore', 'Have you ever contested an elective position before?')}
+            {aspirantDetails.contestedBefore === 'yes' && (
+              <>
+                {aspirantTextField('contestedPosition', 'Position', { half: true })}
+                {aspirantTextField('contestedYear', 'Year', { half: true })}
+                {aspirantTextField('contestedParty', 'Party', { half: true })}
+                {aspirantTextField('contestedOutcome', 'Outcome', { half: true })}
+              </>
+            )}
+            {aspirantYesNoField('currentlyHoldsOffice', 'Are you currently holding any elected public office?')}
+            {aspirantDetails.currentlyHoldsOffice === 'yes'
+              && aspirantTextField('currentOfficeDetails', 'Please specify your current office', { multiline: true })}
+            {aspirantYesNoField('bankruptcyHistory', 'Have you ever been declared bankrupt or been involved in bankruptcy or insolvency proceedings?')}
+            {aspirantDetails.bankruptcyHistory === 'yes'
+              && aspirantTextField('bankruptcyDetails', 'Please provide details', { multiline: true })}
+            {aspirantYesNoField('criminalProceedings', 'Are you currently facing any criminal proceedings?')}
+            {aspirantDetails.criminalProceedings === 'yes'
+              && aspirantTextField('criminalProceedingsDetails', 'Please provide details', { multiline: true })}
+          </>
+        ))}
+
+        {sectionPage(10, 'Section J · Campaign & organisational capacity', (
+          <>
+            {aspirantTextField('supportNetwork', 'Describe your support / network within your electoral area', { multiline: true })}
+            {aspirantTextField('volunteerCount', 'Estimated number of volunteers / supporters', { half: true, type: 'number' })}
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>Existing campaign / grassroots mobilisation structure</InputLabel>
+                <Select
+                  name="campaignStructure"
+                  value={aspirantDetails.campaignStructure}
+                  onChange={handleAspirantChange}
+                  label="Existing campaign / grassroots mobilisation structure"
+                >
+                  <MenuItem value="yes">Yes</MenuItem>
+                  <MenuItem value="no">No</MenuItem>
+                  <MenuItem value="in_development">In Development</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            {aspirantTextField('grassrootsStrategy', 'Describe your proposed grassroots organisation strategy', { multiline: true })}
+          </>
+        ))}
+
+        {sectionPage(11, 'Section K · Commitment to DEP-BUS', (
+          <>
+            {aspirantYesNoField('upholdPartyValues', 'Are you willing to uphold the values, constitution, policies, rules and decisions of DEP-BUS?')}
+            {aspirantYesNoField('peacefulPolitics', 'Will you conduct your political activities peacefully and respectfully, avoiding violence, hate speech, personal attacks and incitement?')}
+            {aspirantYesNoField('supportIssueBasedPolitics', 'Will you support peaceful, issue-based politics focused on unity, devolution and development?')}
+            {aspirantYesNoField('abideByNominationProcess', 'Will you abide by the Party’s nomination procedures and decisions of the relevant Party organs?')}
+          </>
+        ))}
+      </Box>
+    );
+  };
 
   const renderPaymentStep = () => {
     if (!requiresPayment) {
@@ -674,21 +1268,152 @@ const JoinUs = () => {
         image="/images/handss.jpg"
       />
       <Container maxWidth="lg" sx={{ py: { xs: 4, md: 6 } }}>
-        <Stepper 
-          activeStep={activeStep} 
-          sx={{ 
-            mb: { xs: 2, sm: 4 },
-            '& .MuiStepLabel-label': {
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-            },
-          }}
-        >
-          {steps.map((label) => (
-            <Step key={label}>
-              <StepLabel>{label}</StepLabel>
-            </Step>
-          ))}
-        </Stepper>
+        {isAspirantPlan && activeStep > 0 ? (
+          <Paper
+            variant="outlined"
+            sx={{
+              mb: { xs: 2, sm: 4 },
+              p: { xs: 2, sm: 2.5 },
+              borderRadius: 3,
+              borderColor: 'rgba(0, 100, 0, 0.16)',
+              background: 'linear-gradient(135deg, rgba(0, 100, 0, 0.045), rgba(255,255,255,0.98) 62%)',
+            }}
+          >
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, mb: 2 }}>
+              <Box>
+                <Typography
+                  variant="overline"
+                  sx={{ color: 'success.dark', fontWeight: 800, letterSpacing: 1.2, lineHeight: 1.5 }}
+                >
+                  Aspirant application
+                </Typography>
+                <Typography variant="h6" sx={{ color: 'primary.dark', fontWeight: 800 }}>
+                  {isAspirantPaymentStep
+                    ? 'Application sections complete'
+                    : `Section ${String.fromCharCode(65 + aspirantSectionIndex)} of K`}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {isAspirantPaymentStep
+                    ? 'Your application is ready for the final step.'
+                    : aspirantSectionTitles[aspirantSectionIndex].replace(/^Section [A-K] · /, '')}
+                </Typography>
+              </Box>
+              <Chip
+                label={isAspirantPaymentStep ? '11 / 11' : `${activeStep} / 11`}
+                color="success"
+                variant="outlined"
+                sx={{ fontWeight: 800, flexShrink: 0 }}
+              />
+            </Box>
+            <LinearProgress
+              variant="determinate"
+              value={sectionProgress}
+              aria-label="Application section progress"
+              sx={{
+                height: 5,
+                mb: 2,
+                borderRadius: 5,
+                bgcolor: 'rgba(0, 100, 0, 0.1)',
+                '& .MuiLinearProgress-bar': { borderRadius: 5, bgcolor: 'success.dark' },
+              }}
+            />
+            <Box
+              ref={stepperContainerRef}
+              sx={{
+                overflowX: 'auto',
+                scrollBehavior: 'smooth',
+                scrollbarWidth: 'thin',
+                '&::-webkit-scrollbar': { height: 5 },
+                '&::-webkit-scrollbar-thumb': {
+                  borderRadius: 5,
+                  bgcolor: 'rgba(0, 100, 0, 0.25)',
+                },
+              }}
+            >
+              <Box
+                role="list"
+                aria-label="Application sections A through K"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  minWidth: { xs: 590, sm: '100%' },
+                  maxWidth: 1100,
+                  mx: 'auto',
+                  py: 0.5,
+                }}
+              >
+                {aspirantSectionTitles.map((title, index) => {
+                  const letter = String.fromCharCode(65 + index);
+                  const isCurrent = !isAspirantPaymentStep && index === aspirantSectionIndex;
+                  const isComplete = isAspirantPaymentStep || index < aspirantSectionIndex;
+                  return (
+                    <React.Fragment key={title}>
+                      <Box
+                        role="listitem"
+                        aria-label={`${title}${isCurrent ? ', current section' : isComplete ? ', completed' : ''}`}
+                        title={title}
+                        sx={{ display: 'flex', justifyContent: 'center', flex: '0 0 38px' }}
+                      >
+                        <Box
+                          ref={isCurrent || (isAspirantPaymentStep && index === aspirantSectionTitles.length - 1)
+                            ? activeStepRef
+                            : undefined}
+                          aria-current={isCurrent ? 'step' : undefined}
+                          sx={{
+                            display: 'grid',
+                            placeItems: 'center',
+                            width: 34,
+                            height: 34,
+                            borderRadius: '50%',
+                            border: '2px solid',
+                            borderColor: isCurrent || isComplete ? 'success.dark' : 'grey.300',
+                            bgcolor: isCurrent ? 'success.dark' : isComplete ? 'success.main' : 'background.paper',
+                            color: isCurrent || isComplete ? 'common.white' : 'text.secondary',
+                            fontSize: '0.875rem',
+                            fontWeight: 800,
+                            boxShadow: isCurrent ? '0 0 0 4px rgba(0, 100, 0, 0.12)' : 'none',
+                            transition: 'all 180ms ease',
+                          }}
+                        >
+                          {letter}
+                        </Box>
+                      </Box>
+                      {index < aspirantSectionTitles.length - 1 && (
+                        <Box
+                          aria-hidden="true"
+                          sx={{
+                            flex: '1 0 12px',
+                            height: 2,
+                            bgcolor: index < aspirantSectionIndex || isAspirantPaymentStep
+                              ? 'success.main'
+                              : 'grey.300',
+                            transition: 'background-color 180ms ease',
+                          }}
+                        />
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </Box>
+            </Box>
+          </Paper>
+        ) : (
+          <Stepper
+            activeStep={activeStep}
+            sx={{
+              mb: { xs: 2, sm: 4 },
+              '& .MuiStepLabel-label': {
+                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              },
+            }}
+          >
+            {steps.map((label) => (
+              <Step key={label}>
+                <StepLabel>{label}</StepLabel>
+              </Step>
+            ))}
+          </Stepper>
+        )}
 
         <StyledPaper>
           {error && (
@@ -735,7 +1460,9 @@ const JoinUs = () => {
                   {isSubmitting
                     ? 'Processing…'
                     : activeStep !== steps.length - 1
-                      ? 'Next'
+                      ? activeStep > 0 && activeStep < steps.length - 1
+                        ? `Next: ${steps[activeStep + 1].split(' · ')[0]}`
+                        : 'Next'
                       : !requiresPayment
                         ? 'Submit Application'
                         : pendingPayment
