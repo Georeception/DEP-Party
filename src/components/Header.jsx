@@ -22,7 +22,7 @@ import { styled } from '@mui/material/styles';
 import { Link, useNavigate } from 'react-router-dom';
 import MenuIcon from '@mui/icons-material/Menu';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
-import LoginIcon from '@mui/icons-material/Login';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
 
 const TopHeader = styled(AppBar)(({ theme, scrolled }) => ({
   backgroundColor: '#168b1b',
@@ -88,7 +88,7 @@ const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
   transition: 'all 0.2s ease',
 }));
 
-const LoginButton = styled(Button)(({ theme }) => ({
+const JoinButton = styled(Button)(({ theme }) => ({
   fontWeight: 700,
   fontSize: '0.78rem',
   padding: '4px 14px',
@@ -149,10 +149,6 @@ const Header = () => {
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
-  };
-
-  const handleLoginClick = () => {
-    navigate('/login');
   };
 
   const aboutMenuItems = [
@@ -237,10 +233,10 @@ const Header = () => {
             </ListItem>
           );
         })}
-        {/* Add Login to mobile menu */}
+        {/* Add Join to mobile menu */}
         <ListItem
           component={Link}
-          to="/login"
+          to="/volunteer"
           sx={{
             cursor: 'pointer',
             minHeight: 44,
@@ -249,7 +245,7 @@ const Header = () => {
             },
           }}
         >
-          <ListItemText primary="LOGIN" />
+          <ListItemText primary="JOIN" />
         </ListItem>
       </List>
     </Box>
@@ -318,13 +314,13 @@ const Header = () => {
                 >
                   <MenuIcon />
                 </IconButton>
-                <LoginButton
+                <JoinButton
                   component={Link}
-                  to="/login"
-                  startIcon={<LoginIcon />}
+                  to="/volunteer"
+                  startIcon={<PersonAddIcon />}
                 >
-                  LOGIN
-                </LoginButton>
+                  JOIN
+                </JoinButton>
               </>
             ) : (
               <>
@@ -406,13 +402,13 @@ const Header = () => {
                       </NavButton>
                     )
                   ))}
-                  <LoginButton
+                  <JoinButton
                     component={Link}
-                    to="/login"
-                    startIcon={<LoginIcon />}
+                    to="/volunteer"
+                    startIcon={<PersonAddIcon />}
                   >
-                    LOGIN
-                  </LoginButton>
+                    JOIN
+                  </JoinButton>
                 </Box>
               </>
             )}
