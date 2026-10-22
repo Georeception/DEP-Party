@@ -5,9 +5,10 @@ import {
 } from './membershipPlans';
 
 describe('membership plans', () => {
-  test('offers six general plans and five youth and disability plans', () => {
-    expect(membershipPlans).toHaveLength(6);
+  test('offers five general plans and five youth and disability plans', () => {
+    expect(membershipPlans).toHaveLength(5);
     expect(membershipPlans.filter((plan) => plan.youthAmount !== null)).toHaveLength(5);
+    expect(membershipPlans.some((plan) => plan.id === 'mwananchi')).toBe(false);
   });
 
   test('uses the supplied general and youth/PWD rates', () => {

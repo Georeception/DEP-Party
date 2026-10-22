@@ -7,15 +7,6 @@ export const membershipCategories = [
 
 export const membershipPlans = [
   {
-    id: 'mwananchi',
-    title: 'Mwananchi',
-    position: null,
-    description: 'A member of the community and the foundation of our movement.',
-    generalAmount: 0,
-    youthAmount: null,
-    features: ['Open to all citizens', 'Build a stronger grassroots movement'],
-  },
-  {
     id: 'mca',
     title: 'MCA',
     position: 'Member of the County Assembly',

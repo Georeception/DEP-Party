@@ -108,9 +108,7 @@ const JoinUs = () => {
   ));
   const [activeStep, setActiveStep] = useState(initialPlan ? 1 : 0);
   const [selectedPlan, setSelectedPlan] = useState(initialPlan?.id || null);
-  const [selectedCategory, setSelectedCategory] = useState(
-    initialPlan?.id === 'mwananchi' && initialCategory === 'youth_pwd' ? 'general' : initialCategory
-  );
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [registrationIsFree, setRegistrationIsFree] = useState(isFreeRegistrationPeriod);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingPayment, setPendingPayment] = useState(null);
@@ -200,7 +198,7 @@ const JoinUs = () => {
   const [error, setError] = useState('');
 
   const selectedPlanDetails = membershipPlans.find((plan) => plan.id === selectedPlan);
-  const isAspirantPlan = Boolean(selectedPlanDetails && selectedPlan !== 'mwananchi');
+  const isAspirantPlan = Boolean(selectedPlanDetails);
   const selectedAmount = getMembershipAmount(selectedPlanDetails, selectedCategory);
   const requiresPayment = selectedAmount > 0 && !registrationIsFree;
   const steps = isAspirantPlan
@@ -659,10 +657,6 @@ const JoinUs = () => {
               value={selectedCategory}
               onChange={(_, value) => {
                 setSelectedCategory(value);
-                if (value === 'youth_pwd' && selectedPlan === 'mwananchi') {
-                  setSelectedPlan(null);
-                  setActiveStep(0);
-                }
               }}
               aria-label="Membership pricing categories"
               sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
@@ -716,7 +710,7 @@ const JoinUs = () => {
                               <>
                                 <Chip size="small" color="success" label="FREE REGISTRATION" sx={{ mb: 0.75, fontWeight: 800 }} />
                                 <Typography variant="body2" color="text.secondary">
-                                  {amount === 0 ? 'Mwananchi membership remains free' : `KES ${amount.toLocaleString('en-KE')} from 1 December`}
+                                  {amount === 0 ? 'This plan remains free' : `KES ${amount.toLocaleString('en-KE')} from 1 December`}
                                 </Typography>
                               </>
                             ) : (
@@ -1498,7 +1492,7 @@ const JoinUs = () => {
           </Typography>
           <Typography variant="body1">
             {selectedAmount === 0
-              ? 'Mwananchi membership is free. Submit your application to join.'
+              ? 'Your membership is free. Submit your application to join.'
               : 'Your registration is free through 30 November 2026. Submit your application to join now.'}
           </Typography>
         </Box>
