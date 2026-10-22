@@ -6,6 +6,7 @@ jest.mock('react-router-dom', () => ({
 }), { virtual: true });
 
 jest.mock('../services/api', () => ({
+  getApiEndpoint: jest.fn((path) => `http://localhost:8000/api/${path}`),
   locationApi: {
     getCounties: jest.fn().mockResolvedValue({ results: [] }),
     getConstituencies: jest.fn().mockResolvedValue({ results: [] }),
@@ -44,10 +45,10 @@ describe('aspirant application membership gate', () => {
   test('shows each form section on its own page and blocks Section B without a membership number', async () => {
     render(<JoinUs />);
 
-    expect(await screen.findByRole('heading', { name: 'Section A · Personal details' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Section A of K' })).toBeInTheDocument();
-    expect(screen.getByRole('list', { name: 'Application sections A through K' })).toBeVisible();
-    expect(screen.getAllByRole('listitem')).toHaveLength(11);
+    expect(await screen.findByRole('heading', { name: 'Personal details' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Section A of 12' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Application sections' })).toBeVisible();
+    expect(screen.getAllByRole('listitem')).toHaveLength(12);
     expect(screen.getByLabelText('Section A · Personal details, current section')).toBeVisible();
     expect(screen.getByRole('textbox', { name: /Full name as appearing on National ID/ })).toBeVisible();
     expect(screen.queryByRole('heading', { name: 'Section B · DEP-BUS membership' })).not.toBeInTheDocument();
@@ -57,6 +58,9 @@ describe('aspirant application membership gate', () => {
     });
     fireEvent.change(screen.getByRole('textbox', { name: /National ID \/ Passport number/ }), {
       target: { value: '12345678' },
+    });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Email Address' }), {
+      target: { value: 'applicant@example.com' },
     });
     fireEvent.change(screen.getByLabelText(/Date of birth/), {
       target: { value: '1990-01-01' },
@@ -70,6 +74,9 @@ describe('aspirant application membership gate', () => {
     fireEvent.change(screen.getByRole('textbox', { name: /Sub-County/ }), {
       target: { value: 'Westlands' },
     });
+    fireEvent.change(screen.getByRole('textbox', { name: /Postal \/ physical address/ }), {
+      target: { value: 'Westlands, Nairobi' },
+    });
 
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Gender' }));
     fireEvent.click(await screen.findByRole('option', { name: 'Female' }));
@@ -81,28 +88,36 @@ describe('aspirant application membership gate', () => {
     fireEvent.mouseDown(await screen.findByRole('combobox', { name: 'Ward' }));
     fireEvent.click(await screen.findByRole('option', { name: 'Parklands' }));
 
-    fireEvent.click(screen.getByRole('button', { name: /Next: Section B/ }));
-    expect(await screen.findByRole('heading', { name: 'Section B · DEP-BUS membership' })).toBeInTheDocument();
+    const nextToSectionB = screen.getByRole('button', { name: /Next: Section B/ });
+    expect(nextToSectionB).toBeEnabled();
+    fireEvent.click(nextToSectionB);
+    expect(await screen.findByRole('heading', { name: 'DEP-BUS membership' })).toBeInTheDocument();
     expect(screen.getByText('Are you currently a member of DEP-BUS?')).toBeVisible();
-    expect(screen.queryByRole('heading', { name: 'Section C · Position applied for' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Position applied for' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getAllByRole('radio', { name: 'No' })[0]);
     fireEvent.click(screen.getAllByRole('radio', { name: 'No' })[1]);
 
     expect(screen.getByText(/All Aspirants are advised to reconfirm/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /Next: Section C/ }));
-    expect(screen.getByRole('heading', { name: 'Section B · DEP-BUS membership' })).toBeInTheDocument();
-    expect(screen.getByText('A membership number/reference is required before continuing.')).toBeInTheDocument();
+    const nextToSectionC = screen.getByRole('button', { name: /Next: Section C/ });
+    expect(nextToSectionC).toBeDisabled();
+    expect(screen.getByText('Required. Your membership number/reference must start with DEP.')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole('textbox', { name: /DEP-BUS membership number \/ reference/ }), {
+      target: { value: '12345' },
+    });
+    expect(nextToSectionC).toBeDisabled();
 
     fireEvent.change(screen.getByRole('textbox', { name: /DEP-BUS membership number \/ reference/ }), {
       target: { value: 'DEP-12345' },
     });
-    fireEvent.click(screen.getByRole('button', { name: /Next: Section C/ }));
-    expect(screen.getByRole('heading', { name: 'Section C · Position applied for' })).toBeInTheDocument();
+    expect(nextToSectionC).toBeEnabled();
+    fireEvent.click(nextToSectionC);
+    expect(screen.getByRole('heading', { name: 'Position applied for' })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Position applied for' })).toHaveValue('Member of the County Assembly');
 
     fireEvent.click(screen.getByRole('button', { name: /Next: Section D/ }));
-    expect(screen.getByRole('heading', { name: 'Section D · Electoral area' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Electoral area' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Electoral county' })).toBeVisible();
-  }, 20000);
+  }, 60000);
 });

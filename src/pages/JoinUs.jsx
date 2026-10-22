@@ -33,7 +33,7 @@ import PageHero from '../components/PageHero';
 import { styled } from '@mui/material/styles';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { loadPaystack } from '../services/paystack';
-import { locationApi, membershipApi } from '../services/api';
+import { getApiEndpoint, locationApi, membershipApi } from '../services/api';
 import {
   getMembershipAmount,
   isFreeRegistrationPeriod,
@@ -45,8 +45,10 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(4),
   marginTop: theme.spacing(2),
   marginBottom: theme.spacing(4),
+  border: '1px solid #dce3dc',
   borderRadius: 8,
-  boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+  background: 'linear-gradient(145deg, #ffffff 0%, #fbfcf9 100%)',
+  boxShadow: '0 12px 30px rgba(16, 59, 41, 0.07)',
   [theme.breakpoints.down('sm')]: {
     padding: theme.spacing(2),
   },
@@ -90,6 +92,7 @@ const aspirantSectionTitles = [
   'Section I · Political & electoral information',
   'Section J · Campaign & organisational capacity',
   'Section K · Commitment to DEP-BUS',
+  'Section M · Document attachments',
 ];
 
 const JoinUs = () => {
@@ -184,6 +187,15 @@ const JoinUs = () => {
     supportIssueBasedPolitics: '',
     abideByNominationProcess: '',
   });
+  const [documentUrls, setDocumentUrls] = useState({
+    idDocument: '',
+    passportPhoto: '',
+    membershipProof: '',
+    academicCertificates: '',
+    leadershipDocuments: '',
+    otherDocuments: '',
+  });
+  const [uploadingFiles, setUploadingFiles] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
 
@@ -198,10 +210,77 @@ const JoinUs = () => {
     Math.max(activeStep - 1, 0),
     aspirantSectionTitles.length - 1
   );
+  const currentSectionLetter = aspirantSectionTitles[aspirantSectionIndex].match(/^Section ([A-M])/)?.[1];
   const isAspirantPaymentStep = isAspirantPlan && activeStep === steps.length - 1;
   const sectionProgress = isAspirantPaymentStep
     ? 100
     : (Math.min(Math.max(activeStep, 0), aspirantSectionTitles.length) / aspirantSectionTitles.length) * 100;
+  const membershipReferenceIsValid = /^DEP/.test(formData.membershipReference.trim());
+  const getMissingFieldsForStep = (step) => {
+    if (step === 1) {
+      const requiredFields = isAspirantPlan
+        ? ['fullName', 'nationalIdNumber', 'dateOfBirth', 'email', 'phone', 'whatsappNumber', 'subCounty', 'postalPhysicalAddress', 'county', 'constituency', 'ward', 'gender']
+        : ['firstName', 'lastName', 'email', 'phone', 'age', 'occupation', 'county', 'constituency', 'ward', 'gender'];
+      const missingFields = requiredFields.filter(field => !String(formData[field] || '').trim());
+      if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+        missingFields.push('email');
+      }
+      return missingFields;
+    }
+
+    if (isAspirantPlan && step === 2) {
+      const requiredFields = ['membershipStatus', 'membershipStatusConfirmed', 'membershipReference'];
+      const missingFields = requiredFields.filter(field => !String(formData[field] || '').trim());
+      if (!membershipReferenceIsValid) missingFields.push('membershipReference');
+      return [...new Set(missingFields)];
+    }
+
+    if (isAspirantPlan && step === 4) {
+      return ['electoralCounty', 'electoralConstituency', 'electoralWard']
+        .filter(field => !formData[field]);
+    }
+
+    if (isAspirantPlan && step === 5) {
+      const missingFields = aspirantDetails.specialCategories.length ? [] : ['specialCategories'];
+      if (aspirantDetails.specialCategories.includes('pwd') && !aspirantDetails.disabilityDetails.trim()) {
+        missingFields.push('disabilityDetails');
+      }
+      return missingFields;
+    }
+
+    if (!isAspirantPlan) return [];
+
+    const requiredFieldsByStep = {
+      6: ['educationLevel', 'professionalQualifications', 'currentOccupation', 'currentEmployer', 'professionalExperience'],
+      7: ['heldPublicLeadership', 'organisations', 'communityContribution'],
+      8: ['motivation', 'priorityIssueOne', 'priorityIssueTwo', 'priorityIssueThree', 'devolutionVision', 'partyContribution'],
+      9: ['contestedBefore', 'currentlyHoldsOffice', 'bankruptcyHistory', 'criminalProceedings'],
+      10: ['supportNetwork', 'volunteerCount', 'campaignStructure', 'grassrootsStrategy'],
+      11: ['upholdPartyValues', 'peacefulPolitics', 'supportIssueBasedPolitics', 'abideByNominationProcess'],
+    };
+    const requiredFields = [...(requiredFieldsByStep[step] || [])];
+
+    if (step === 6 && aspirantDetails.educationLevel === 'other') requiredFields.push('educationOther');
+    if (step === 7 && aspirantDetails.heldPublicLeadership === 'yes') {
+      requiredFields.push('previousLeadershipPosition', 'previousLeadershipInstitution', 'previousLeadershipPeriod');
+    }
+    if (step === 9) {
+      if (aspirantDetails.contestedBefore === 'yes') {
+        requiredFields.push('contestedPosition', 'contestedYear', 'contestedParty', 'contestedOutcome');
+      }
+      if (aspirantDetails.currentlyHoldsOffice === 'yes') requiredFields.push('currentOfficeDetails');
+      if (aspirantDetails.bankruptcyHistory === 'yes') requiredFields.push('bankruptcyDetails');
+      if (aspirantDetails.criminalProceedings === 'yes') requiredFields.push('criminalProceedingsDetails');
+    }
+
+    if (step === 12) {
+      return ['idDocument', 'passportPhoto', 'membershipProof', 'academicCertificates', 'leadershipDocuments', 'otherDocuments']
+        .filter(field => !documentUrls[field]);
+    }
+
+    return requiredFields.filter(field => !String(aspirantDetails[field] || '').trim());
+  };
+  const currentStepIncomplete = getMissingFieldsForStep(activeStep).length > 0;
 
   useEffect(() => {
     const refreshRegistrationPeriod = () => setRegistrationIsFree(isFreeRegistrationPeriod());
@@ -299,6 +378,37 @@ const JoinUs = () => {
     setAspirantDetails(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleFileUpload = async (file, documentType) => {
+    if (!file) return;
+
+    setUploadingFiles(prev => ({ ...prev, [documentType]: true }));
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', documentType);
+
+      const response = await fetch(getApiEndpoint('upload_file/'), {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload file');
+      }
+
+      const data = await response.json();
+      setDocumentUrls(prev => ({ ...prev, [documentType]: data.url }));
+      return data.url;
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      setError(`Failed to upload ${documentType}. Please try again.`);
+      return null;
+    } finally {
+      setUploadingFiles(prev => ({ ...prev, [documentType]: false }));
+    }
+  };
+
   const handleSpecialCategoryChange = (category) => {
     setAspirantDetails(prev => {
       if (category === 'none') {
@@ -320,39 +430,16 @@ const JoinUs = () => {
   };
 
   const handleNext = () => {
-    if (activeStep === 1) {
-      const requiredFields = isAspirantPlan
-        ? ['fullName', 'nationalIdNumber', 'dateOfBirth', 'phone', 'whatsappNumber', 'subCounty', 'county', 'constituency', 'ward', 'gender']
-        : ['firstName', 'lastName', 'phone', 'age', 'occupation', 'county', 'constituency', 'ward', 'gender'];
-      if (requiresPayment) requiredFields.push('email');
-      const missingFields = requiredFields.filter(field => !formData[field]);
-
-      if (missingFields.length > 0) {
-        setError('Please fill in all required fields marked with *');
-        return;
+    const missingFields = getMissingFieldsForStep(activeStep);
+    if (missingFields.length > 0) {
+      if (activeStep === 2 && !membershipReferenceIsValid) {
+        setError('Membership number/reference must start with DEP.');
+      } else if (activeStep === 1 && missingFields.includes('email') && formData.email) {
+        setError('Enter a valid email address.');
+      } else {
+        setError('Please complete all required fields marked with *.');
       }
-      if (requiresPayment && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
-        setError('Enter a valid email address for Paystack checkout.');
-        return;
-      }
-    }
-
-    if (isAspirantPlan && activeStep === 2) {
-      const requiredFields = ['membershipStatus', 'membershipStatusConfirmed', 'membershipReference'];
-      const missingFields = requiredFields.filter(field => !formData[field]?.trim());
-      if (missingFields.length > 0) {
-        setError('Please fill in all required fields marked with *');
-        return;
-      }
-    }
-
-    if (isAspirantPlan && activeStep === 4) {
-      const requiredFields = ['electoralCounty', 'electoralConstituency', 'electoralWard'];
-      const missingFields = requiredFields.filter(field => !formData[field]);
-      if (missingFields.length > 0) {
-        setError('Please complete the electoral area fields before continuing.');
-        return;
-      }
+      return;
     }
     
     setActiveStep((prevStep) => prevStep + 1);
@@ -370,13 +457,13 @@ const JoinUs = () => {
     const freeRegistration = isFreeRegistrationPeriod();
     setRegistrationIsFree(freeRegistration);
     const paymentRequired = selectedAmount > 0 && !freeRegistration;
-    const requiredFields = isAspirantPlan
-      ? ['fullName', 'nationalIdNumber', 'dateOfBirth', 'phone', 'whatsappNumber', 'subCounty', 'county', 'constituency', 'ward', 'gender', 'membershipStatus', 'membershipStatusConfirmed', 'membershipReference', 'electoralCounty', 'electoralConstituency', 'electoralWard']
-      : ['firstName', 'lastName', 'phone', 'age', 'occupation', 'county', 'constituency', 'ward', 'gender'];
-    if (paymentRequired) requiredFields.push('email');
-    const missingFields = requiredFields.filter(field => !formData[field]);
-    if (missingFields.length > 0) {
-      setError('Please fill in all required fields marked with *');
+    const missingStep = isAspirantPlan
+      ? Array.from({ length: 12 }, (_, index) => index + 1)
+        .find(step => getMissingFieldsForStep(step).length > 0)
+      : getMissingFieldsForStep(1).length > 0 ? 1 : null;
+    if (missingStep) {
+      setActiveStep(missingStep);
+      setError('Please complete all required fields marked with *.');
       return;
     }
 
@@ -415,6 +502,57 @@ const JoinUs = () => {
       aspirant_details: isAspirantPlan ? aspirantDetails : {},
       membership_type: selectedPlan,
       membership_category: selectedCategory,
+      // Section E: Special Category
+      special_category: aspirantDetails.specialCategories.length > 0 
+        ? aspirantDetails.specialCategories[0] 
+        : null,
+      disability_nature: aspirantDetails.disabilityDetails || '',
+      // Section F: Education, Profession & Experience
+      education_level: aspirantDetails.educationLevel || '',
+      professional_qualifications: aspirantDetails.professionalQualifications || '',
+      current_occupation: aspirantDetails.currentOccupation || '',
+      current_employer: aspirantDetails.currentEmployer || '',
+      professional_experience: aspirantDetails.professionalExperience || '',
+      // Section G: Leadership & Community Engagement
+      previous_leadership_position: aspirantDetails.heldPublicLeadership || '',
+      previous_leadership_details: aspirantDetails.heldPublicLeadership === 'yes'
+        ? `Position: ${aspirantDetails.previousLeadershipPosition}, Institution: ${aspirantDetails.previousLeadershipInstitution}, Period: ${aspirantDetails.previousLeadershipPeriod}`
+        : '',
+      organizations_participated: aspirantDetails.organisations || '',
+      community_contribution: aspirantDetails.communityContribution || '',
+      // Section H: Motivation for DEP-BUS Ticket
+      motivation_reason: aspirantDetails.motivation || '',
+      key_issues: `${aspirantDetails.priorityIssueOne}\n${aspirantDetails.priorityIssueTwo}\n${aspirantDetails.priorityIssueThree}`.trim(),
+      devolution_understanding: aspirantDetails.devolutionVision || '',
+      contribution_to_party: aspirantDetails.partyContribution || '',
+      // Section I: Political & Electoral Information
+      contested_before: aspirantDetails.contestedBefore || '',
+      contested_details: aspirantDetails.contestedBefore === 'yes'
+        ? `Position: ${aspirantDetails.contestedPosition}, Year: ${aspirantDetails.contestedYear}, Party: ${aspirantDetails.contestedParty}, Outcome: ${aspirantDetails.contestedOutcome}`
+        : '',
+      current_public_office: aspirantDetails.currentlyHoldsOffice || '',
+      current_office_details: aspirantDetails.currentOfficeDetails || '',
+      bankruptcy_proceedings: aspirantDetails.bankruptcyHistory || '',
+      bankruptcy_details: aspirantDetails.bankruptcyDetails || '',
+      criminal_proceedings: aspirantDetails.criminalProceedings || '',
+      criminal_proceedings_details: aspirantDetails.criminalProceedingsDetails || '',
+      // Section J: Campaign & Organisational Capacity
+      support_network: aspirantDetails.supportNetwork || '',
+      volunteer_count: aspirantDetails.volunteerCount ? parseInt(aspirantDetails.volunteerCount) : null,
+      campaign_structure: aspirantDetails.campaignStructure || '',
+      grassroots_strategy: aspirantDetails.grassrootsStrategy || '',
+      // Section K: Commitment to DEP-BUS
+      uphold_values: aspirantDetails.upholdPartyValues || '',
+      peaceful_politics: aspirantDetails.peacefulPolitics || '',
+      issue_based_politics: aspirantDetails.supportIssueBasedPolitics || '',
+      abide_nomination: aspirantDetails.abideByNominationProcess || '',
+      // Section M: Document Attachments (Cloudinary URLs)
+      id_document: documentUrls.idDocument || '',
+      passport_photo: documentUrls.passportPhoto || '',
+      membership_proof: documentUrls.membershipProof || '',
+      academic_certificates: documentUrls.academicCertificates || '',
+      leadership_documents: documentUrls.leadershipDocuments || '',
+      other_documents: documentUrls.otherDocuments || '',
     };
 
     if (!paymentRequired) {
@@ -617,9 +755,7 @@ const JoinUs = () => {
       {isAspirantPlan ? (
         <>
           <Grid item xs={12}>
-            <Typography variant="h6" component="h2" sx={{ color: 'primary.dark', fontWeight: 800 }}>
-              Section A · Personal details
-            </Typography>
+            {formSectionHeading('Section A · Personal details', 'aspirant-section-1')}
           </Grid>
           <Grid item xs={12} sm={6}>
             <TextField
@@ -691,15 +827,13 @@ const JoinUs = () => {
           label="Email Address"
           name="email"
           type="email"
-          required={requiresPayment}
+          required
           value={formData.email}
           onChange={handleChange}
-          error={Boolean(error) && requiresPayment
-            && (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim()))}
-          helperText={Boolean(error) && !formData.email && requiresPayment
-            ? 'Email address is required for Paystack'
-            : Boolean(formData.email) && requiresPayment
-              && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())
+          error={Boolean(error) && (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim()))}
+          helperText={!formData.email
+            ? 'Email address is required'
+            : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())
               ? 'Enter a valid email address'
               : ''}
         />
@@ -802,6 +936,7 @@ const JoinUs = () => {
       {isAspirantPlan && (
         <Grid item xs={12}>
           <TextField
+            required
             fullWidth
             label="Postal / physical address"
             name="postalPhysicalAddress"
@@ -879,9 +1014,7 @@ const JoinUs = () => {
   const renderMembershipDetailsStep = () => (
     <Grid container spacing={3}>
       <Grid item xs={12}>
-        <Typography variant="h6" component="h2" sx={{ color: 'primary.dark', fontWeight: 800 }}>
-          Section B · DEP-BUS membership
-        </Typography>
+        {formSectionHeading('Section B · DEP-BUS membership', 'aspirant-section-2')}
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
           Confirm your membership status and provide your membership number before continuing.
         </Typography>
@@ -889,34 +1022,26 @@ const JoinUs = () => {
       <Grid item xs={12} md={6}>
         <FormControl component="fieldset" required error={Boolean(error) && !formData.membershipStatus}>
           <Typography variant="body2" sx={{ fontWeight: 700 }}>
-            Are you currently a member of DEP-BUS?
+            Are you currently a member of DEP-BUS? <span style={{ color: '#c62828' }}>*</span>
           </Typography>
-          <RadioGroup
-            row
-            name="membershipStatus"
-            value={formData.membershipStatus}
-            onChange={handleChange}
-          >
+          <RadioGroup row name="membershipStatus" value={formData.membershipStatus} onChange={handleChange}>
             <FormControlLabel value="yes" control={<Radio />} label="Yes" />
             <FormControlLabel value="no" control={<Radio />} label="No" />
             <FormControlLabel value="not_sure" control={<Radio />} label="Not sure" />
           </RadioGroup>
+          {Boolean(error) && !formData.membershipStatus && <FormHelperText>This answer is required</FormHelperText>}
         </FormControl>
       </Grid>
       <Grid item xs={12} md={6}>
         <FormControl component="fieldset" required error={Boolean(error) && !formData.membershipStatusConfirmed}>
           <Typography variant="body2" sx={{ fontWeight: 700 }}>
-            Have you confirmed your membership status using USSD code *509#?
+            Have you confirmed your membership status using USSD code *509#? <span style={{ color: '#c62828' }}>*</span>
           </Typography>
-          <RadioGroup
-            row
-            name="membershipStatusConfirmed"
-            value={formData.membershipStatusConfirmed}
-            onChange={handleChange}
-          >
+          <RadioGroup row name="membershipStatusConfirmed" value={formData.membershipStatusConfirmed} onChange={handleChange}>
             <FormControlLabel value="yes" control={<Radio />} label="Yes" />
             <FormControlLabel value="no" control={<Radio />} label="No" />
           </RadioGroup>
+          {Boolean(error) && !formData.membershipStatusConfirmed && <FormHelperText>This answer is required</FormHelperText>}
         </FormControl>
       </Grid>
       {(formData.membershipStatus === 'no'
@@ -936,18 +1061,17 @@ const JoinUs = () => {
           name="membershipReference"
           value={formData.membershipReference}
           onChange={handleChange}
-          error={Boolean(error) && !formData.membershipReference.trim()}
-          helperText={
-            Boolean(error) && !formData.membershipReference.trim()
-              ? 'A membership number/reference is required before continuing.'
-              : 'Required before you can continue to the aspirant application.'
-          }
+          placeholder="DEP123456"
+          error={Boolean(formData.membershipReference.trim()) && !membershipReferenceIsValid}
+          helperText={!formData.membershipReference.trim()
+            ? 'Required. Your membership number/reference must start with DEP.'
+            : !membershipReferenceIsValid
+              ? 'Enter a valid membership number/reference starting with DEP.'
+              : 'Membership number/reference accepted.'}
         />
       </Grid>
       <Grid item xs={12}>
-        <Typography variant="caption" color="error">
-          * Fields marked with an asterisk are required
-        </Typography>
+        <Typography variant="caption" color="error">* Fields marked with an asterisk are required</Typography>
       </Grid>
     </Grid>
   );
@@ -955,6 +1079,7 @@ const JoinUs = () => {
   const aspirantTextField = (name, label, options = {}) => (
     <Grid item xs={12} sm={options.half ? 6 : 12}>
       <TextField
+        required
         fullWidth
         name={name}
         label={label}
@@ -964,39 +1089,109 @@ const JoinUs = () => {
         minRows={options.multiline ? (options.rows || 3) : undefined}
         type={options.type || 'text'}
         inputProps={options.type === 'number' ? { min: 0 } : undefined}
+        error={Boolean(error) && !String(aspirantDetails[name] || '').trim()}
+        helperText={Boolean(error) && !String(aspirantDetails[name] || '').trim() ? 'This field is required' : ''}
       />
     </Grid>
   );
 
   const aspirantYesNoField = (name, label, choices = ['Yes', 'No']) => (
     <Grid item xs={12}>
-      <FormControl component="fieldset">
-        <Typography variant="body2" sx={{ fontWeight: 700 }}>{label}</Typography>
-        <RadioGroup
-          row
-          name={name}
-          value={aspirantDetails[name]}
-          onChange={handleAspirantChange}
-        >
+      <FormControl component="fieldset" required error={Boolean(error) && !aspirantDetails[name]}>
+        <Typography variant="body2" sx={{ fontWeight: 700 }}>
+          {label} <span style={{ color: '#c62828' }}>*</span>
+        </Typography>
+        <RadioGroup row name={name} value={aspirantDetails[name]} onChange={handleAspirantChange}>
           {choices.map((choice) => {
             const value = choice === 'In Development' ? 'in_development' : choice.toLowerCase();
             return <FormControlLabel key={value} value={value} control={<Radio />} label={choice} />;
           })}
         </RadioGroup>
+        {Boolean(error) && !aspirantDetails[name] && <FormHelperText>This answer is required</FormHelperText>}
       </FormControl>
     </Grid>
   );
 
-  const sectionPage = (step, title, children) => (
-    activeStep === step ? (
-      <Paper key={title} variant="outlined" sx={{ p: { xs: 2, sm: 3 }, borderRadius: 2 }}>
-        <Typography variant="h6" component="h2" sx={{ mb: 2.5, color: 'primary.dark', fontWeight: 800 }}>
-          {title}
-        </Typography>
-        <Grid container spacing={2.5}>{children}</Grid>
-      </Paper>
-    ) : null
-  );
+  const formSectionHeading = (title, headingId) => {
+    const [, letter, heading] = title.match(/^Section ([A-M]) · (.+)$/) || [];
+
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.75, mb: 3 }}>
+        <Box
+          aria-hidden="true"
+          sx={{
+            display: 'grid',
+            placeItems: 'center',
+            width: 42,
+            height: 42,
+            flexShrink: 0,
+            borderRadius: 1,
+            bgcolor: 'success.dark',
+            color: 'common.white',
+            fontSize: '1rem',
+            fontWeight: 800,
+          }}
+        >
+          {letter}
+        </Box>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="overline" sx={{ color: 'success.dark', fontWeight: 800, lineHeight: 1.4 }}>
+            APPLICATION SECTION
+          </Typography>
+          <Typography
+            id={headingId}
+            variant="h5"
+            component="h2"
+            sx={{ color: 'primary.dark', fontWeight: 800, lineHeight: 1.25 }}
+          >
+            {heading || title}
+          </Typography>
+        </Box>
+      </Box>
+    );
+  };
+
+  const sectionPage = (step, title, children) => {
+    const headingId = `aspirant-section-${step}`;
+
+    return activeStep === step ? (
+      <Box
+        key={title}
+        component="section"
+        aria-labelledby={headingId}
+        sx={{
+          py: { xs: 0.5, sm: 1 },
+          '& .MuiOutlinedInput-root': {
+            borderRadius: 1,
+            bgcolor: 'common.white',
+          },
+          '& .MuiRadioGroup-root, & .MuiFormGroup-root': {
+            flexWrap: 'wrap',
+            gap: 1,
+            mt: 1,
+          },
+          '& .MuiFormControlLabel-root': {
+            m: 0,
+            minHeight: 44,
+            px: 1.25,
+            py: 0.25,
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 1,
+            bgcolor: 'common.white',
+            transition: 'border-color 160ms ease, background-color 160ms ease',
+            '&:hover': {
+              borderColor: 'success.main',
+              bgcolor: 'rgba(23, 79, 54, 0.035)',
+            },
+          },
+        }}
+      >
+        {formSectionHeading(title, headingId)}
+        <Grid container spacing={{ xs: 2, sm: 2.5 }}>{children}</Grid>
+      </Box>
+    ) : null;
+  };
 
   const renderAspirantApplicationStep = () => {
     const electionAreaSelect = (field, label, options, disabled, onChange) => (
@@ -1075,9 +1270,14 @@ const JoinUs = () => {
         {sectionPage(5, 'Section E · Special category', (
           <>
             <Grid item xs={12}>
-              <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                Do you belong to any of the following categories?
-              </Typography>
+              <FormControl
+                component="fieldset"
+                required
+                error={Boolean(error) && !aspirantDetails.specialCategories.length}
+              >
+                <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                  Do you belong to any of the following categories? <span style={{ color: '#c62828' }}>*</span>
+                </Typography>
               <FormGroup row>
                 {[
                   ['woman', 'Woman'],
@@ -1097,9 +1297,12 @@ const JoinUs = () => {
                   />
                 ))}
               </FormGroup>
+                {Boolean(error) && !aspirantDetails.specialCategories.length
+                  && <FormHelperText>Select at least one category.</FormHelperText>}
+              </FormControl>
             </Grid>
             {aspirantDetails.specialCategories.includes('pwd')
-              && aspirantTextField('disabilityDetails', 'Nature of disability (optional)', { multiline: true })}
+              && aspirantTextField('disabilityDetails', 'Nature of disability', { multiline: true })}
           </>
         ))}
 
@@ -1107,8 +1310,9 @@ const JoinUs = () => {
           <>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel>Highest level of education</InputLabel>
+                    <InputLabel required>Highest level of education</InputLabel>
                 <Select
+                      required
                   name="educationLevel"
                   value={aspirantDetails.educationLevel}
                   onChange={handleAspirantChange}
@@ -1183,9 +1387,10 @@ const JoinUs = () => {
             {aspirantTextField('supportNetwork', 'Describe your support / network within your electoral area', { multiline: true })}
             {aspirantTextField('volunteerCount', 'Estimated number of volunteers / supporters', { half: true, type: 'number' })}
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Existing campaign / grassroots mobilisation structure</InputLabel>
+              <FormControl fullWidth required>
+                <InputLabel required>Existing campaign / grassroots mobilisation structure</InputLabel>
                 <Select
+                  required
                   name="campaignStructure"
                   value={aspirantDetails.campaignStructure}
                   onChange={handleAspirantChange}
@@ -1207,6 +1412,77 @@ const JoinUs = () => {
             {aspirantYesNoField('peacefulPolitics', 'Will you conduct your political activities peacefully and respectfully, avoiding violence, hate speech, personal attacks and incitement?')}
             {aspirantYesNoField('supportIssueBasedPolitics', 'Will you support peaceful, issue-based politics focused on unity, devolution and development?')}
             {aspirantYesNoField('abideByNominationProcess', 'Will you abide by the Party’s nomination procedures and decisions of the relevant Party organs?')}
+          </>
+        ))}
+        {sectionPage(12, 'Section M · Document attachments', (
+          <>
+            <Grid item xs={12}>
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                Please attach/upload copies of the following documents where applicable. Files are uploaded securely to Cloudinary.
+              </Typography>
+            </Grid>
+            {[
+              { key: 'idDocument', label: 'National ID / Passport', required: true },
+              { key: 'passportPhoto', label: 'Passport-size photograph', required: true },
+              { key: 'membershipProof', label: 'Proof of DEP-BUS membership', required: true },
+              { key: 'academicCertificates', label: 'Academic / Professional certificates', required: true, multiple: true },
+              { key: 'leadershipDocuments', label: 'Leadership / Public service documentation', required: true, multiple: true },
+              { key: 'otherDocuments', label: 'Other supporting documents', required: true, multiple: true },
+            ].map(({ key, label, required, multiple }) => (
+              <Grid item xs={12} sm={6} key={key}>
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, mb: 1 }}>
+                    {label} {required && <span style={{ color: 'red' }}>*</span>}
+                  </Typography>
+                  <input
+                    type="file"
+                    accept={multiple ? 'image/*,.pdf' : 'image/*,.pdf'}
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        handleFileUpload(file, key);
+                      }
+                    }}
+                    disabled={uploadingFiles[key]}
+                    style={{ display: 'none' }}
+                    id={`file-${key}`}
+                  />
+                  <label htmlFor={`file-${key}`}>
+                    <Button
+                      variant="outlined"
+                      component="span"
+                      disabled={uploadingFiles[key]}
+                      fullWidth
+                      sx={{ mb: 1 }}
+                    >
+                      {uploadingFiles[key] ? 'Uploading...' : `Choose ${multiple ? 'files' : 'file'}`}
+                    </Button>
+                  </label>
+                  {documentUrls[key] && (
+                    <Box sx={{ mt: 1 }}>
+                      <Typography variant="caption" color="success.main">
+                        ✓ File uploaded successfully
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        component="a"
+                        href={documentUrls[key]}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        sx={{ ml: 1, color: 'primary.main', textDecoration: 'underline' }}
+                      >
+                        View
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Grid>
+            ))}
+            <Grid item xs={12}>
+              <Alert severity="info" sx={{ mt: 2 }}>
+                Maximum file size: 10MB. Accepted formats: Images (JPG, PNG) and PDF.
+              </Alert>
+            </Grid>
           </>
         ))}
       </Box>
@@ -1290,7 +1566,7 @@ const JoinUs = () => {
                 <Typography variant="h6" sx={{ color: 'primary.dark', fontWeight: 800 }}>
                   {isAspirantPaymentStep
                     ? 'Application sections complete'
-                    : `Section ${String.fromCharCode(65 + aspirantSectionIndex)} of K`}
+                    : `Section ${currentSectionLetter} of ${aspirantSectionTitles.length}`}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   {isAspirantPaymentStep
@@ -1299,7 +1575,9 @@ const JoinUs = () => {
                 </Typography>
               </Box>
               <Chip
-                label={isAspirantPaymentStep ? '11 / 11' : `${activeStep} / 11`}
+                label={isAspirantPaymentStep
+                  ? `${aspirantSectionTitles.length} / ${aspirantSectionTitles.length}`
+                  : `${activeStep} / ${aspirantSectionTitles.length}`}
                 color="success"
                 variant="outlined"
                 sx={{ fontWeight: 800, flexShrink: 0 }}
@@ -1332,7 +1610,7 @@ const JoinUs = () => {
             >
               <Box
                 role="list"
-                aria-label="Application sections A through K"
+                aria-label="Application sections"
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
@@ -1432,6 +1710,8 @@ const JoinUs = () => {
                 display: 'flex', 
                 justifyContent: 'space-between', 
                 mt: { xs: 2, sm: 4 },
+                pt: { xs: 2, sm: 2.5 },
+                borderTop: '1px solid #dce3dc',
                 flexDirection: { xs: 'column', sm: 'row' },
                 gap: { xs: 2, sm: 0 },
               }}>
@@ -1448,7 +1728,10 @@ const JoinUs = () => {
                 <Button
                   variant="contained"
                   onClick={activeStep === steps.length - 1 ? handleSubmit : handleNext}
-                  disabled={(activeStep === 0 && !selectedPlan) || isSubmitting || submitted}
+                  disabled={(activeStep === 0 && !selectedPlan)
+                    || (isAspirantPlan && activeStep === 2 && currentStepIncomplete)
+                    || isSubmitting
+                    || submitted}
                   sx={{
                     backgroundColor: '#006400',
                     '&:hover': {

@@ -9,6 +9,12 @@ if (!API_BASE_URL) {
 
 const API_ORIGIN = new URL(API_BASE_URL).origin;
 
+export const getApiEndpoint = (path) => {
+    const normalizedBaseUrl = API_BASE_URL.replace(/\/+$/, '');
+    const normalizedPath = path.replace(/^\/+/, '');
+    return `${normalizedBaseUrl}/${normalizedPath}`;
+};
+
 export const getApiUrl = (path) => {
     if (!path) return API_ORIGIN;
     if (/^https?:\/\//i.test(path)) return path;
