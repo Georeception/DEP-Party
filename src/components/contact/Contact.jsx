@@ -90,11 +90,11 @@ const Contact = () => {
                     <PhoneIcon color="primary" fontSize="small" />
                     <Typography
                       component="a"
-                      href="tel:0724253622"
+                      href="tel:0703828941"
                       variant="body2"
                       sx={{ fontSize: '0.95rem', color: 'inherit', textDecoration: 'none' }}
                     >
-                      0724253622
+                      0703828941
                     </Typography>
                   </Box>
                   <Box display="flex" alignItems="center" gap={1}>

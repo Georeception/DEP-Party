@@ -649,7 +649,7 @@ const JoinUs = () => {
               </Typography>
               <Typography variant="body2">
                 {registrationIsFree
-                  ? 'Every plan is free during the registration period. From 1 December, paid plans will continue through Paystack checkout.'
+                  ? 'Every plan is free during the registration period. Paid plans will continue through Paystack checkout until 30th nov 2026.'
                   : 'Choose a plan to see the fee and complete your application securely.'}
               </Typography>
             </Box>
@@ -710,7 +710,7 @@ const JoinUs = () => {
                               <>
                                 <Chip size="small" color="success" label="FREE REGISTRATION" sx={{ mb: 0.75, fontWeight: 800 }} />
                                 <Typography variant="body2" color="text.secondary">
-                                  {amount === 0 ? 'This plan remains free' : `KES ${amount.toLocaleString('en-KE')} from 1 December`}
+                                  {amount === 0 ? 'This plan remains free' : `KES ${amount.toLocaleString('en-KE')} until 30th nov 2026`}
                                 </Typography>
                               </>
                             ) : (
@@ -1756,13 +1756,13 @@ const JoinUs = () => {
           </Typography>
           <Button
             component="a"
-            href="https://wa.me/254724253622"
+            href="https://wa.me/254703828941"
             target="_blank"
             rel="noopener noreferrer"
             variant="outlined"
             color="success"
           >
-            WhatsApp us on 0724253622
+            WhatsApp us on 0703828941
           </Button>
         </Box>
       </Container>

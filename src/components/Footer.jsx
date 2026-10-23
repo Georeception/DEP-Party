@@ -119,7 +119,7 @@ const Footer = () => {
               </Link>
             </Stack>
             <Typography variant="body2" sx={{ mb: 1 }}>
-              Phone: <Link href="tel:0724253622" color="inherit" underline="hover">0724253622</Link>
+              Phone: <Link href="tel:0703828941" color="inherit" underline="hover">0703828941</Link>
             </Typography>
             <Typography variant="body2">
               Physical Location: Geomaps Centre, Upper Hill, Nairobi, Kenya

@@ -134,7 +134,7 @@ const MembershipPlans = () => {
                             FREE
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            {amount === 0 ? 'This plan remains free' : `KES ${amount.toLocaleString('en-KE')} from 1 December 2026`}
+                            {amount === 0 ? 'This plan remains free' : `KES ${amount.toLocaleString('en-KE')} until 30th nov 2026`}
                           </Typography>
                         </>
                       ) : (
@@ -175,7 +175,7 @@ const MembershipPlans = () => {
         }}>
           <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.9)' }}>
             {registrationIsFree
-              ? 'No payment is needed before the deadline. From 1 December 2026, Paystack checkout will be used for plans with a fee.'
+              ? 'No payment is needed before the deadline. Paystack checkout will be used for plans with a fee until 30th nov 2026.'
               : 'Secure Paystack checkout is available for plans with a fee.'}
           </Typography>
           <Button
