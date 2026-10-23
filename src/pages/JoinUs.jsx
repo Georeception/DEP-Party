@@ -710,7 +710,7 @@ const JoinUs = () => {
                               <>
                                 <Chip size="small" color="success" label="FREE REGISTRATION" sx={{ mb: 0.75, fontWeight: 800 }} />
                                 <Typography variant="body2" color="text.secondary">
-                                  {amount === 0 ? 'This plan remains free' : `KES ${amount.toLocaleString('en-KE')} until 30th nov 2026`}
+                                  {amount === 0 ? 'This plan remains free' : `valid until 30th nov 2026`}
                                 </Typography>
                               </>
                             ) : (

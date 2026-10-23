@@ -134,7 +134,7 @@ const MembershipPlans = () => {
                             FREE
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            {amount === 0 ? 'This plan remains free' : `KES ${amount.toLocaleString('en-KE')} until 30th nov 2026`}
+                            {amount === 0 ? 'This plan remains free' : `valid until 30th nov 2026`}
                           </Typography>
                         </>
                       ) : (
